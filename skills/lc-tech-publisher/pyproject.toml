@@ -1,0 +1,40 @@
+[project]
+name = "lc-tech-publisher"
+version = "0.1.0"
+description = "LongCipher branded media package generator (cover + podcast + video) built on HyperFrames"
+requires-python = ">=3.10"
+dependencies = [
+    # Default TTS backend (Microsoft Edge Neural TTS). Needs internet at synth time.
+    "edge-tts>=6.1.0",
+]
+
+[project.optional-dependencies]
+# Optional local brand-voice TTS. CosyVoice3 + torch live in their own repo/env;
+# install separately per references/tts.md. Documented here only.
+cosyvoice = []
+
+# Dev tooling (lint / format / test). Install with: uv sync --group dev
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8",
+]
+
+# This is a script collection, not an importable package. Invoke scripts with:
+#   uv run python scripts/<name>.py --help
+# `uv` owns the virtualenv + the edge-tts dependency (uv sync).
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

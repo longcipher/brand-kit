@@ -1,1 +1,4 @@
 .rumdl_cache/
+.codebuddy/
+.pytest_cache/
+.ruff_cache/

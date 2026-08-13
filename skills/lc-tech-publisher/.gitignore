@@ -1,0 +1,12 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# uv / virtualenv (uv.lock is committed for reproducible installs)
+.venv/
+venv/
+
+# Local render/runtime artifacts
+dist/
+output/
