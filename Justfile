@@ -12,8 +12,10 @@
 skill_dir := "skills/lc-tech-publisher"
 
 # ── Dev setup ────────────────────────────────────────────────────────────────
+# Python tooling lives in the skill project (skills/lc-tech-publisher/pyproject.toml);
+# target it explicitly so uv finds pyproject.toml from the repo root.
 setup:
-    uv sync --group dev
+    uv sync --project {{skill_dir}} --group dev
 
 # ── Docs (Markdown) ──────────────────────────────────────────────────────────
 docs-format:
