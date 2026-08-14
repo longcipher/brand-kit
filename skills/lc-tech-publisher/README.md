@@ -67,8 +67,9 @@ skills/lc-tech-publisher/
 ├── assets/
 │   ├── logos/lc.svg           # LongCipher 六边形 logo
 │   └── templates/
-│       ├── tpl_cover.html     # 浅色封面模板(比例自适应,data-duration=2.4s)
-│       └── dashboard.html     # 浅色视频主模板(cover + keypoint/three_points/outro 内嵌 + caption + audio clips)
+│       ├── cover.html         # 浅色封面模板(比例自适应,data-duration=2.4s)
+│       ├── dashboard.html      # 浅色视频主模板(5 种 slide 内嵌 + caption + audio clips)
+│       └── shorts.html         # 浅色竖屏 9:16 短视频模板
 └── README.md
 ```
 

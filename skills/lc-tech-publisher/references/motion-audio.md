@@ -1,7 +1,7 @@
 # LongCipher Motion & Audio Language (Light System)
 
 Defines how motion and audio behave in the **light, fixed-component** explainers
-(`assets/templates/dashboard.html` + `tpl_cover.html`). The goal is *restrained,
+(`assets/templates/dashboard.html` + `cover.html`). The goal is *restrained,
 engineered motion* — restrained enough to read as a serious brief, animated
 enough to never feel like a deck. All visuals live in fixed templates; this doc
 describes the GSAP vocabulary the templates use so any future template edit
@@ -64,7 +64,7 @@ tl.to(el, { autoAlpha: 0, duration: 0.4, ease: "power2.inOut" }, end - 0.35);
 tl.add(function(){ el.classList.remove("on"); }, end);
 ```
 
-### Cover hero pattern (`tpl_cover.html` and slide-0)
+### Cover hero pattern (`cover.html` and slide-0)
 
 ```js
 tl.fromTo(".lockup",     { x: -16, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.5 }, 0.10);

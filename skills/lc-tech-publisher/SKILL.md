@@ -13,10 +13,12 @@ The LLM **never writes CSS, HTML, or animations**. All visual styling lives in *
 
 | Template | Role | File |
 |---|---|---|
-| Cover card | Hero / cover slide 0 + 4-ratio static cover | `assets/templates/tpl_cover.html` |
-| Keypoint | Single statement / "this is the point" slide | `assets/templates/tpl_keypoint.html` (built into `dashboard.html`) |
-| 3-point summary | Three-up grid card slide | `assets/templates/tpl_three_points.html` (built into `dashboard.html`) |
-| Outro card | Wrap-up / signoff closing slide | `assets/templates/tpl_outro.html` (built into `dashboard.html`) |
+| Cover card | Hero / cover slide 0 + 4-ratio static cover | `assets/templates/cover.html` |
+| Keypoint | Single statement / "this is the point" slide | inline in `dashboard.html` (`<section class="slide">` keypoint branch) |
+| 3-point summary | Three-up grid card slide | inline in `dashboard.html` (three_points branch) |
+| Outro card | Wrap-up / signoff closing slide | inline in `dashboard.html` (outro branch) |
+| Video master | Timeline orchestrator embedding all 5 slide types + captions + audio | `assets/templates/dashboard.html` |
+| Shorts | Vertical 9:16 reel from cover + slide feed | `assets/templates/shorts.html` |
 
 The LLM only outputs structured JSON (title, key points, TTS text, color theme name). Every video looks like every other video in the LongCipher system — visual fidelity is **100% controlled**, debugging cost is **near-zero**, and a brand designer can re-skin everything by editing CSS variables (`--accent`, `--ink`, `--canvas`) in one place.
 
@@ -187,7 +189,7 @@ uv run python scripts/build_cover.py --script dist/script.json --lang zh --out d
 uv run python scripts/build_cover.py --script dist/script.json --lang en --out dist/cover_en
 ```
 
-Each run emits **four** ratio-aware cover HTML files + `logos/lc.svg` + a `manifest.json` map (rendered from the same `tpl_cover.html` template, with `--scale` adjusted per ratio).
+Each run emits **four** ratio-aware cover HTML files + `logos/lc.svg` + a `manifest.json` map (rendered from the same `cover.html` template, with `--scale` adjusted per ratio).
 
 **Gate**: `dist/cover/cover_*.html` and `dist/cover_en/cover_*.html` (4 files each) exist, `logos/lc.svg` present in both, `manifest.json` present in both.
 
@@ -216,7 +218,7 @@ cd dist/video_zh && npx --yes hyperframes lint && npx --yes hyperframes check
 cd dist/video_en && npx --yes hyperframes lint && npx --yes hyperframes check
 ```
 
-**Gate**: both commands exit 0 with no errors. If `check` reports layout or contrast issues, fix the generated markup in `assets/templates/dashboard.html` / `tpl_cover.html` (or the slide data) and rebuild.
+**Gate**: both commands exit 0 with no errors. If `check` reports layout or contrast issues, fix the generated markup in `assets/templates/dashboard.html` / `cover.html` (or the slide data) and rebuild.
 
 ## Step 7 — Render & Deliver
 
@@ -307,7 +309,7 @@ output/shorts_en.mp4         # en 1080×1920 vertical scrolling feed (10s, BGM)
 ## Implementation Rules
 
 - **Brand fidelity is non-negotiable.** Follow `references/brand-design.md` tokens exactly: light canvas `#fafbfc`, surface `#ffffff`, ink `#171718`, single brand blue `#0a72ef`, 2px ceiling on corner radius (no pills), shadow-as-border (layered `box-shadow`), DM Sans + JetBrains Mono. Never introduce a second hue. Keep the `lc.svg` mark as a low-opacity brand watermark.
-- **LLM writes JSON only.** Never author CSS, HTML, or animations. Add new visual variants by extending the four component templates (`tpl_cover.html` / `dashboard.html`), not by generating ad-hoc styles from the LLM.
+- **LLM writes JSON only.** Never author CSS, HTML, or animations. Add new visual variants by extending `cover.html` / `dashboard.html` (and its inline slide branches), not by generating ad-hoc styles from the LLM.
 - **Domain-agnostic.** Same visual quality for any content. The LLM's job is the copy; the templates' job is the look.
 - **Sync is exact.** Caption/audio element `data-duration` equals the turn audio duration from `speaker_timestamps.json`. Slide `data-start`/`data-duration` align to the same absolute timeline. Animation is compositor-only (transform/opacity), never layout-thrashing props.
 - **Caption = spoken text.** The `.cap` text and the spoken audio must be identical strings.

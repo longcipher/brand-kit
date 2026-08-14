@@ -82,10 +82,10 @@ component templates consume. Visual fidelity is guaranteed by the templates
 
 | `type` | Required fields | Renders via |
 |--------|----------------|-------------|
-| `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | `tpl_keypoint.html` |
-| `three_points` | `points[3]` each `{ no, title, body }`, optional `title`, optional `audioFrom`/`audioTo` | `tpl_three_points.html` |
-| `table` | `head[≥2]` (string column headers), `rows[]` (each row must have the same cell count as `head`), optional `numCols` (array of 0-based column indices rendered right-aligned in mono blue), optional `title`, optional `audioFrom`/`audioTo` | `dashboard.html` inline table |
-| `outro` | `recap` (string), optional `signoff`, optional `audioFrom`/`audioTo` | `tpl_outro.html` |
+| `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | inline in `dashboard.html` (keypoint branch) |
+| `three_points` | `points[3]` each `{ no, title, body }`, optional `title`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (three_points branch) |
+| `table` | `head[≥2]` (string column headers), `rows[]` (each row must have the same cell count as `head`), optional `numCols` (array of 0-based column indices rendered right-aligned in mono blue), optional `title`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (table branch) |
+| `outro` | `recap` (string), optional `signoff`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (outro branch) |
 
 ### Keeping the center zone in sync with the narration
 
@@ -101,7 +101,7 @@ Each `keypoint` should therefore carry the **concrete numbers and claims** of it
 chapter in `bullets[]` (and a `statement` that is a specific takeaway, not a
 generic motto). Generic "金句"-only slides force the viewer back to the caption.
 
-The **cover** is component 1 (`tpl_cover.html`) and also serves as the video's
+The **cover** is component 1 (`cover.html`) and also serves as the video's
 hero slide — it is not listed in `slides[]`; the builder always opens the video
 with the cover, then plays `slides[]`, then ends on `outro` (auto-appended if the
 last slide isn't an `outro`). Use the `table` slide whenever you have comparable

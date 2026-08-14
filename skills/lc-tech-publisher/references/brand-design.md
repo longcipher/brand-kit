@@ -103,16 +103,20 @@ injects data into these. **Four components:**
 
 | # | Template | Drives | Purpose |
 |---|----------|--------|---------|
-| 1 | `tpl_cover.html` | `cover` + `headlines` | Cover card / video hero. Title, subtitle, kicker, 4 headline bullets, meta row. |
-| 2 | `tpl_keypoint.html` | `slides[]` where `type:"keypoint"` | A single highlighted statement / quote / key takeaway — large, centered, one accent line. |
-| 3 | `tpl_three_points.html` | `slides[]` where `type:"three_points"` | Exactly 3 structured points (title + body each) in a 3-up grid. |
-| 4 | `tpl_outro.html` | `slides[]` where `type:"outro"` | Closing card: recap line + sign-off + brand lockup. |
+| 1 | `cover.html` | `cover` + `headlines` | Cover card / video hero. Title, subtitle, kicker, 4 headline bullets, meta row. |
+| 2 | `dashboard.html` (keypoint branch) | `slides[]` where `type:"keypoint"` | A single highlighted statement / quote / key takeaway — large, centered, one accent line. |
+| 3 | `dashboard.html` (three_points branch) | `slides[]` where `type:"three_points"` | Exactly 3 structured points (title + body each) in a 3-up grid. |
+| 4 | `dashboard.html` (outro branch) | `slides[]` where `type:"outro"` | Closing card: recap line + sign-off + brand lockup. |
+| 5 | `dashboard.html` (table branch) | `slides[]` where `type:"table"` | Comparison table (funding rounds, metrics, rankings). |
 
 The video master (`dashboard.html`) is a thin timeline orchestrator: it lays the
-4 component renderings as full-frame **slides**, each a HyperFrames `clip` with
+5 slide types as full-frame **slides**, each a HyperFrames `clip` with
 `data-start`/`data-duration` aligned to the dialogue timeline, plus the persistent
-embedded single-line caption and the dialogue audio. The components themselves
-never change — only their injected data does.
+embedded single-line caption and the dialogue audio. The slides are rendered
+**inline** in `dashboard.html`'s JS (one `<section>` branch per `type`) — there are
+no separate per-slide template files. `cover.html` is the only standalone slide
+template and is shared by the 4-ratio static cover and the video hero. The
+components themselves never change — only their injected data does.
 
 ## 6. Semantic Exception (direction)
 
@@ -126,7 +130,8 @@ appear *only* inside a data table cell, never as a decorative glow.
 ## 7. Brand Lockup
 
 - `lc.svg` mark placed small (top-left or bottom corner) as a quiet watermark at
-  ~0.5 opacity, monochrome, never recolored, never given a glow.
+  ~0.5 opacity. The mark carries its fixed multicolor K-line palette and is
+  never recolored, never given a glow.
 - Wordmark "LongCipher" in DM Sans 700, `--ink-300`, low emphasis.
 
 ## 8. Do / Don't

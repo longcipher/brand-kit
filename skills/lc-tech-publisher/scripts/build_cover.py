@@ -83,7 +83,7 @@ def main() -> None:
     (out_dir / "logos").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(logo_src, out_dir / "logos" / "lc.svg")
 
-    template_path = SKILL_ROOT / "assets" / "templates" / "tpl_cover.html"
+    template_path = SKILL_ROOT / "assets" / "templates" / "cover.html"
     if not template_path.exists():
         die(f"missing template: {template_path}")
     template = template_path.read_text(encoding="utf-8")

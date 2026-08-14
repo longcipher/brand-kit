@@ -12,10 +12,10 @@
 - No saturated AI-default typefaces (Geist, Inter, Roboto). Use **DM Sans** + **JetBrains Mono**.
 - No rounded, pillowy corners. Edges are nearly square — a technical, deliberate feel.
 - No multi-color mesh gradients, no blob logos, no glow auras.
-- No purple/violet/indigo accents. One blue only.
+- No purple/violet/indigo accents. One blue only — **this rule applies to all UI elements (lines, borders, text, fills). The brand logo mark is the single intentional exception: it is a fixed multicolor asset (see §13) and is never recolored.**
 - No "AI shimmer," no animated gradient borders, no autoplay motion.
 
-**Brand as mark, not decoration.** The LongCipher identity is carried by real vector marks (`lc.svg`, `lc11.svg`, `lc169.svg`, `lc31.svg`, `lc43.svg` at the repo root) — geometric, monochrome, built from the letterforms. These are the brand, not a gradient blob. Use them as-is; do not wrap them in gradient containers.
+**Brand as mark, not decoration.** The LongCipher identity is carried by real vector marks (`lc.svg`, `lc11.svg`, `lc169.svg`, `lc31.svg`, `lc43.svg` at the repo root). The core mark is built from the letterforms with **K-line–inspired geometry** and uses a **fixed multicolor palette** (red `#FF0000`, green `#08C477`, dark `#2A2A2A`, light `#FAFAF9`) — this is an intentional brand asset, not a gradient blob. The `lc11/31/43/169` variants additionally embed the `LongCipher` wordmark (set in their own font/color). Use the marks **as-is**; never recolor, regradient, or wrap them in gradient containers. The video/cover lockup uses the pure mark `lc.svg` for the icon and renders the `LongCipher` wordmark in **DM Sans** via CSS (see the skill's `{{LOGO}}` + `.lockup span`), so do not substitute the embedded-text variants (`lc31/43/169`) for the lockup.
 
 ---
 
@@ -286,14 +286,14 @@ Rules:
 
 ## 13. Appendix — Brand Assets
 
-Real vector marks at repo root (use as-is, monochrome, no gradient containers):
+Real vector marks at repo root (use as-is, **fixed multicolor K-line palette**, no gradient containers, never recolor):
 
 | File | Use |
 |------|-----|
-| `lc.svg` | Primary logo / wordmark |
-| `lc11.svg` | Compact / square variant |
-| `lc169.svg` | Wide / banner variant |
-| `lc31.svg` | Alternate mark |
-| `lc43.svg` | Alternate mark |
+| `lc.svg` | Pure mark (no text) — used as the video/cover lockup icon |
+| `lc11.svg` | 1:1 variant with embedded `LongCipher` wordmark |
+| `lc31.svg` | 3:1 variant with embedded wordmark + slogan |
+| `lc43.svg` | 4:3 variant with embedded wordmark + slogan |
+| `lc169.svg` | 16:9 variant with embedded wordmark + slogan |
 
-These replace the old mesh-gradient blob logo. They are the brand; treat them as precise geometry, not decoration.
+These replace the old mesh-gradient blob logo. They are the brand; treat them as precise geometry, not decoration. The embedded-wordmark variants (`lc11/31/43/169`) are for static placements (page headers, social avatars) — **the animated video/cover lockup uses `lc.svg` (pure mark) + a DM Sans `LongCipher` rendered by CSS, not an embedded-text variant.**
