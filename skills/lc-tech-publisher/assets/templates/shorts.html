@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="{{LANG}}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, initial-scale=1.0" />
+    <title>{{TITLE}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+      :root {
+        --canvas: #fafbfc; --surface: #ffffff; --ink: #171718;
+        --ink-200: #4e5159; --ink-300: #565a63; --ink-400: #6b6e75;
+        --line: #e0e2e8; --line-strong: #b4b8c2;
+        --accent: #0a72ef; --accent-text: #0a63d0; --accent-hair: rgba(10,114,239,0.40);
+        --shadow-rest: rgba(23,23,23,0.06) 0 0 0 1px, rgba(23,23,23,0.04) 0 1px 2px, #ffffff 0 0 0 1px inset;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1080px; height: 1920px; background: var(--canvas); overflow: hidden;
+        font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink); -webkit-font-smoothing: antialiased;
+      }
+      [data-composition-id] { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+
+      #bg-grid { position: absolute; inset: 0; z-index: 0; }
+      .scanline { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; pointer-events: none;
+        background: linear-gradient(90deg, transparent, var(--accent-hair), transparent); opacity: 0; }
+
+      /* HERO (visible by default so the first frame is a full cover, like the
+         landscape video — no GSAP fromTo hiding it at t=0). Rendered as a
+         fixed-height surface card filling the upper half of the frame, so the
+         cover region reads as a panel whether the title wraps to 2 or 3 lines.
+         flex+space-between distributes the inner groups so short content still
+         fills the card. overflow:hidden guarantees the card never bleeds into
+         the label/viewport below, regardless of font metrics. */
+      .hero {
+        position: absolute; left: 64px; right: 64px; top: 72px; height: 860px; z-index: 5;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: 0 1px 0 rgba(23,23,23,0.04), 0 8px 24px rgba(23,23,23,0.06);
+        padding: 38px 42px 36px;
+        display: flex; flex-direction: column; justify-content: space-between;
+        overflow: hidden;
+      }
+      .hd { display: flex; justify-content: space-between; align-items: center; }
+      .hd .lockup { display: flex; align-items: center; gap: 14px; }
+      .hd .lockup img { width: 44px; height: 44px; }
+      .hd .lockup span { font-family: "JetBrains Mono", monospace; font-size: 23px; font-weight: 700; color: var(--ink-300); letter-spacing: .14em; }
+      .hd .date { font-family: "JetBrains Mono", monospace; font-size: 18px; color: var(--accent-text); border: 1px solid var(--accent-hair); padding: 8px 14px; letter-spacing: .14em; text-transform: uppercase; }
+      .kicker { display: flex; align-items: center; gap: 16px; }
+      .kicker .bar { width: 40px; height: 2px; background: var(--accent); }
+      .kicker .label { font-family: "JetBrains Mono", monospace; font-size: 20px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-text); }
+      .title-block { }
+      .title-block .title { font-size: 84px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; color: var(--ink); }
+      .title-block .sub { margin-top: 18px; font-size: 27px; font-weight: 400; color: var(--ink-200); line-height: 1.32; font-family: "JetBrains Mono", monospace; letter-spacing: .02em; }
+      .hero-headlines { border-top: 1px solid var(--line); padding-top: 18px; }
+      .hero-headlines .hl-head { font-family: "JetBrains Mono", monospace; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-400); margin-bottom: 12px; }
+      .hero-headlines ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; }
+      .hero-headlines li { display: flex; align-items: baseline; gap: 10px; font-size: 21px; line-height: 1.3; color: var(--ink-200); }
+      .hero-headlines .hl-idx { flex: 0 0 auto; color: var(--accent-text); font-family: "JetBrains Mono", monospace; font-weight: 700; }
+
+      /* STATIC sections label — sits in the small gap between the hero card
+         (ends at 932px) and the feed viewport (starts at 1004px). */
+      .sections-label { position: absolute; left: 64px; right: 64px; top: 956px; z-index: 6;
+        font-family: "JetBrains Mono", monospace; font-size: 17px; letter-spacing: .18em;
+        text-transform: uppercase; color: var(--accent-text);
+        border-top: 1px solid var(--line); padding-top: 14px; }
+
+      /* SCROLL FEED viewport — fully static, positioned safely below the hero
+         card so neither layout shifts nor font swaps can cause overlap. */
+      .feed-viewport { position: absolute; left: 64px; right: 64px; top: 1004px; bottom: 184px; overflow: hidden; z-index: 5;
+        -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 56px, #000 calc(100% - 96px), transparent 100%);
+        mask-image: linear-gradient(180deg, transparent 0, #000 56px, #000 calc(100% - 96px), transparent 100%);
+      }
+      .feed-track { position: absolute; left: 0; right: 0; top: 0; }
+      .cat { padding: 30px 0; border-bottom: 1px solid var(--line); }
+      .cat:last-child { border-bottom: none; }
+      .cat .cat-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+      .cat .cat-no { font-family: "JetBrains Mono", monospace; font-size: 18px; font-weight: 700; color: var(--accent-text); letter-spacing: .04em; }
+      .cat .cat-title { font-family: "JetBrains Mono", monospace; font-size: 16px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-text); }
+      .cat .cat-bar { flex: 1; height: 1px; background: var(--line-strong); }
+      .cat .statement { font-size: 38px; font-weight: 700; line-height: 1.22; color: var(--ink); letter-spacing: -0.01em; margin-bottom: 16px; }
+      .cat .bullets { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+      .cat .bullets li { display: flex; align-items: baseline; gap: 14px; font-size: 27px; line-height: 1.34; color: var(--ink-200); }
+      .cat .bullets .b-dot { flex: 0 0 auto; width: 9px; height: 9px; margin-top: 11px; background: var(--accent); border-radius: 2px; }
+
+      /* FOOTER */
+      .footer { position: absolute; left: 64px; right: 64px; bottom: 48px; display: flex; justify-content: center; z-index: 5;
+        background: var(--canvas); padding-top: 8px; }
+      .footer span { font-family: "JetBrains Mono", monospace; font-size: 15px; color: var(--ink-400); letter-spacing: .28em; text-transform: uppercase; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="master"
+      data-composition-id="master"
+      data-width="1080"
+      data-height="1920"
+      data-start="0"
+      data-duration="{{DURATION}}"
+    >
+      <svg id="bg-grid" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 1080 1920">
+        <defs>
+          <pattern id="grid-pat" width="64" height="64" patternUnits="userSpaceOnUse">
+            <path d="M64 0 H0 V64" fill="none" stroke="rgba(23,23,23,0.04)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="1080" height="1920" fill="url(#grid-pat)"/>
+      </svg>
+      <div class="scanline" id="scanline"></div>
+
+      <!-- HERO (static cover, visible at t=0) -->
+      <div class="hero" id="hero">
+        <div class="hd">
+          <div class="lockup"><img src="logos/lc.svg" alt=""><span>LongCipher</span></div>
+          <div class="date">{{DATE}}</div>
+        </div>
+        <div class="kicker">
+          <div class="bar"></div>
+          <div class="label">{{KICKER}}</div>
+        </div>
+        <div class="title-block">
+          <div class="title">{{TITLE}}</div>
+          <div class="sub">{{SUBTITLE}}</div>
+        </div>
+        <div class="hero-headlines">
+          <div class="hl-head">{{HEADLINES_LABEL}}</div>
+          <ul id="hero-hl"></ul>
+        </div>
+      </div>
+
+      <div class="sections-label">{{SECTIONS_LABEL}}</div>
+
+      <div class="feed-viewport" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
+        <div class="feed-track" id="feed-track" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
+          <!-- category sections injected at build time -->
+        </div>
+      </div>
+
+      <div class="footer" data-layout-allow-occlusion><span>LongCipher Research · Daily Brief</span></div>
+
+      <audio id="bgm" src="audio/shorts_bgm.mp3" data-start="0" data-duration="{{DURATION}}" data-track-index="900" data-volume="0.7"></audio>
+    </div>
+
+    <script>window.LC_DATA = {{DATA}};</script>
+    <script>
+      (function () {
+        var DATA = window.LC_DATA || {};
+        var HERO_HL = DATA.heroHeadlines || [];
+        var CATS = DATA.categories || [];
+
+        // Hero headlines (top 4, two columns)
+        var hlEl = document.getElementById("hero-hl");
+        hlEl.innerHTML = HERO_HL.slice(0, 4).map(function (h) {
+          return '<li><span class="hl-idx">›</span><span>' + h + '</span></li>';
+        }).join("");
+
+        // Category sections
+        var track = document.getElementById("feed-track");
+        track.innerHTML = CATS.map(function (c, i) {
+          var bullets = (c.bullets || []).map(function (b) {
+            return '<li><span class="b-dot"></span><span>' + b + '</span></li>';
+          }).join("");
+          return '<div class="cat">'
+            + '<div class="cat-head"><span class="cat-no">' + String(i + 1).padStart(2, "0") + '</span>'
+            + '<span class="cat-title">' + c.eyebrow + '</span><span class="cat-bar"></span></div>'
+            + '<div class="statement">' + c.statement + '</div>'
+            + '<ul class="bullets">' + bullets + '</ul>'
+            + '</div>';
+        }).join("");
+
+        // Static layout: the hero surface card fills the upper half (top:72, height:860)
+// and the feed-viewport starts at top:1004 with bottom:184. No JS positioning
+// needed — works regardless of title line count or font-swap timing.
+        var viewport = document.querySelector(".feed-viewport");
+        var trackH = track.scrollHeight;
+        var viewH = viewport.clientHeight;
+        var BOTTOM_CLEAR = 96;
+        var maxScroll = Math.max(trackH - (viewH - BOTTOM_CLEAR), 0);
+
+        var tl = gsap.timeline({ paused: true });
+        var D = parseFloat("{{DURATION}}") || 24;
+
+        // Hero MUST stay visible at t=0 — the first frame / poster is the cover.
+        // A `from` tween at timeline position 0 renders its "from" state at t=0,
+        // so we must NOT hide the hero (no autoAlpha:0) there. A tiny y nudge is
+        // safe: at progress 0 it is merely 16px lower, still fully visible.
+        tl.from("#hero", { y: 16, duration: 0.6, ease: "power3.out", immediateRender: false }, 0.0);
+        tl.fromTo("#scanline", { opacity: 0, y: 0 }, { opacity: 0.9, y: 1920, duration: 1.6, ease: "power2.inOut" }, 0.4);
+
+        // Scroll the full category list. The whole feed has `D` seconds, so the
+        // last category is fully on screen before the fade-out — never cut off.
+        var scrollStart = 0.8;
+        var scrollEnd = D - 1.6;
+        if (maxScroll > 0) {
+          tl.fromTo(track, { y: 0 }, { y: -maxScroll, duration: scrollEnd - scrollStart, ease: "none" }, scrollStart);
+        }
+
+        tl.to("#master", { autoAlpha: 0, duration: 0.5 }, D - 0.5);
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["master"] = tl;
+      })();
+    </script>
+  </body>
+</html>

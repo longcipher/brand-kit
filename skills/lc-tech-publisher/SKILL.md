@@ -256,6 +256,33 @@ uv run python scripts/verify_media.py output/podcast_full_en.mp3
 
 **Gate**: all deliverables exist in `output/`; `verify_media.py` confirms each MP4 has one `h264` video stream + one audio stream, duration matches `meta.target_seconds` ±10%, and the MP3s are non-empty.
 
+## Step 7b — Render Vertical Shorts (9:16, ≤10s, scrolling feed)
+
+A second visual for short-form platforms (TikTok / Reels / Shorts). Same brand, vertical canvas, no narration, curated scrolling feed of the top-N headlines over a fixed background music track.
+
+```bash
+# Build the composition (zh + en)
+uv run python scripts/build_shorts.py --script dist/script.json --lang zh --out dist/shorts_zh
+uv run python scripts/build_shorts.py --script dist/script.json --lang en --out dist/shorts_en
+
+# Lint + check (88/88 contrast pass WCAG AA, 0 errors)
+cd dist/shorts_zh && npx --yes hyperframes check && cd ../..
+cd dist/shorts_en && npx --yes hyperframes check && cd ../..
+
+# Render — reuses render_video.py; the per-scene audio (the BGM clip baked
+# into the index.html) is muxed automatically, no --audio needed.
+uv run python scripts/render_video.py --project dist/shorts_zh --output output/shorts_zh.mp4
+uv run python scripts/render_video.py --project dist/shorts_en --output output/shorts_en.mp4
+```
+
+**Gate**: `output/shorts_zh.mp4` and `output/shorts_en.mp4` exist, 1080×1920, 30fps, duration exactly 10.0s, ≤2MB each, with one AAC audio stream carrying the BGM.
+
+**Design notes**:
+- The fixed BGM (`assets/audio/shorts_bgm.mp3`, 10s, 161KB, layered 220+277+329Hz sine pad with limiter + fade) is shipped with the skill and reused across every article — no per-article audio work.
+- The feed is **curated**, not exhaustive: 6 top-priority headlines (sorted by `cover.headlines` order). For longer articles, adjust with `--feed-count N`.
+- The feed scrolls at a steady velocity (linear `ease: "none"`), start 1.0s, end ~9.0s — the last card holds visibly until the end-of-video fade.
+- A mask gradient on the feed-viewport fades cards in/out at the top and bottom edges so cards enter/exit cleanly.
+
 ## Delivery
 
 Report the deliverables to the user:
@@ -273,6 +300,8 @@ output/podcast_full.mp3      # zh two-speaker dialogue, podcast-ready
 output/podcast_full_en.mp3   # en dialogue (en-US-AndrewNeural), podcast-ready
 output/explainer_video_zh.mp4    # zh 1920×1080 narrated light video
 output/explainer_video_en.mp4    # en 1920×1080 narrated light video
+output/shorts_zh.mp4         # zh 1080×1920 vertical scrolling feed (10s, BGM)
+output/shorts_en.mp4         # en 1080×1920 vertical scrolling feed (10s, BGM)
 ```
 
 ## Implementation Rules

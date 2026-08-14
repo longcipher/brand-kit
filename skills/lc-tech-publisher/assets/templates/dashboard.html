@@ -199,14 +199,16 @@
       var tl = gsap.timeline({ paused: true });
       tl.set(".cap", { autoAlpha: 0 }, 0);
 
-      // hero / cover
-      tl.fromTo("#slide-0 .corner-tag", { x:16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5 }, 0.1);
-      tl.fromTo("#slide-0 .kicker", { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power3.out" }, 0.2);
-      tl.fromTo("#slide-0 .title", { y:26, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.8, ease:"power3.out" }, 0.35);
-      tl.fromTo("#slide-0 .sub", { y:18, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power2.out" }, 0.65);
-      tl.fromTo("#slide-0 .headlines", { autoAlpha:0 }, { autoAlpha:1, duration:0.5 }, 0.9);
-      tl.fromTo("#slide-0 .headlines li", { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, stagger:0.1, ease:"power2.out" }, 1.0);
-      tl.fromTo("#slide-0 .meta-row", { y:14, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.5 }, 0.85);
+      // hero / cover — immediateRender:false so GSAP does NOT hide these at
+      // creation time (t=0). They stay visible per their CSS default, so a
+      // static preview/poster frame shows the full cover; playback re-reveals.
+      tl.fromTo("#slide-0 .corner-tag", { x:16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, immediateRender:false }, 0.1);
+      tl.fromTo("#slide-0 .kicker", { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power3.out", immediateRender:false }, 0.2);
+      tl.fromTo("#slide-0 .title", { y:26, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.8, ease:"power3.out", immediateRender:false }, 0.35);
+      tl.fromTo("#slide-0 .sub", { y:18, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power2.out", immediateRender:false }, 0.65);
+      tl.fromTo("#slide-0 .headlines", { autoAlpha:0 }, { autoAlpha:1, duration:0.5, immediateRender:false }, 0.9);
+      tl.fromTo("#slide-0 .headlines li", { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, stagger:0.1, ease:"power2.out", immediateRender:false }, 1.0);
+      tl.fromTo("#slide-0 .meta-row", { y:14, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.5, immediateRender:false }, 0.85);
 
       // per-slide enter/exit
       var slideEls = Array.prototype.slice.call(document.querySelectorAll(".slide"));
@@ -275,6 +277,17 @@
       .slide .lockup img { width:34px; height:34px; }
       .slide .lockup span { font-family:"JetBrains Mono",monospace; font-size:18px; font-weight:700; color:var(--ink-300); letter-spacing:.14em; }
       .slide .corner-tag { position:absolute; top:5.5%; right:6%; font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); border:1px solid var(--accent-hair); padding:6px 10px; z-index:6; }
+      /* Cover content is visible by DEFAULT so any static snapshot / preview
+         frame (poster) captured at t=0 shows the full info-rich cover instead
+         of a blank canvas. The entrance animation (below) re-reveals it during
+         playback. This is the opposite of the other slides, which start hidden
+         and are revealed by GSAP only when their window begins. */
+      .slide#slide-0 .corner-tag,
+      .slide#slide-0 .kicker,
+      .slide#slide-0 .title,
+      .slide#slide-0 .sub,
+      .slide#slide-0 .headlines,
+      .slide#slide-0 .meta-row { opacity:1; visibility:visible; }
       .slide .center { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:86%; z-index:5; }
       .slide .kicker { font-family:"JetBrains Mono",monospace; font-size:18px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:20px; display:flex; align-items:center; gap:14px; }
       .slide .kicker::before { content:""; width:32px; height:2px; background:var(--accent); }

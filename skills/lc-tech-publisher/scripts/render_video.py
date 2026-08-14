@@ -75,6 +75,16 @@ def _srt_time(t: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
+def _skip_srt(project: Path, audio_only: bool) -> bool:
+    """Shorts and podcast outputs do not need a sidecar .srt.
+    The main explainer video keeps it. `--srt-only` mode opts back in."""
+    if audio_only:
+        return True
+    if "shorts" in project.name:
+        return True
+    return False
+
+
 def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
     res = subprocess.run(
         cmd, encoding="utf-8", capture_output=True, timeout=900, cwd=str(cwd) if cwd else None
@@ -114,8 +124,7 @@ def main() -> None:
         if not src_mp3.exists():
             die(f"missing {src_mp3} (run generate-audio first)")
         shutil.copyfile(src_mp3, output)
-        srt_path = output.with_suffix(".srt")
-        _write_srt(srt_path, project, sub, args.lang)
+        # Podcast outputs do not need a sidecar .srt.
         sys.stdout.write(f"✓ podcast: {output}\n")
         sys.exit(0)
 
@@ -170,8 +179,9 @@ def main() -> None:
 
     if not output.exists():
         die(f"no MP4 produced: {output}")
-    srt_path = output.with_suffix(".srt")
-    _write_srt(srt_path, project, sub, args.lang)
+    if not _skip_srt(project, args.audio_only):
+        srt_path = output.with_suffix(".srt")
+        _write_srt(srt_path, project, sub, args.lang)
     sys.stdout.write(f"✓ video: {output}\n")
     sys.exit(0)
 

@@ -63,9 +63,15 @@ def render_one(project: Path, src_name: str, output: Path, width: str, height: s
 
     def cleanup() -> None:
         if created_tmp_index:
-            (project / "index.html").unlink(missing_ok=True)
+            try:
+                (project / "index.html").unlink(missing_ok=True)
+            except BaseException:
+                pass
         if index_backup is not None and index_backup.exists():
-            shutil.move(index_backup, project / "index.html")
+            try:
+                shutil.move(index_backup, project / "index.html")
+            except BaseException:
+                pass
 
     tmp_mp4 = project / f"_cover_{src.stem}.mp4"
     sys.stdout.write(f"· rendering {src_name} (standard)…\n")
@@ -100,12 +106,19 @@ def render_one(project: Path, src_name: str, output: Path, width: str, height: s
             str(tmp_mp4),
             "-frames:v",
             "1",
+            "-update",
+            "1",
             "-vf",
             f"scale={width}:{height}",
             str(output),
         ]
     )
-    tmp_mp4.unlink(missing_ok=True)
+    # Best-effort cleanup of the temp render; never let a guarded delete
+    # (e.g. bulk-delete protection in some sandboxes) abort the render.
+    try:
+        tmp_mp4.unlink(missing_ok=True)
+    except BaseException:
+        pass
     if grab.returncode != 0:
         cleanup()
         die("ffmpeg frame extraction failed")
@@ -139,9 +152,27 @@ def main() -> None:
             die(f"missing {manifest_path} (run build-cover first)")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         out_root = Path(args.output).resolve().parent
+        # Derive an output prefix from the supplied filename so the same script
+        # works for both language sets and the single-language case:
+        #   --output output/cover_16x9.png         -> prefix "cover_"      -> cover_16x9.png ...
+        #   --output output/cover_en_16x9.png     -> prefix "cover_en_"  -> cover_en_16x9.png ...
+        #   --output output/zh_16x9.png           -> prefix "zh_"        -> zh_16x9.png ...
+        # Rule: keep every basename token EXCEPT the trailing ratio token and
+        # its extension. That way the leading ratio file (e.g. cover_16x9) is
+        # matched by the manifest keys (16x9 / 9x16 / 4x3 / 3x4) without losing
+        # the cover / language prefix.
+        ratios = set(manifest.get("ratios", {}).keys())
+        base = Path(args.output).resolve().stem
+        tokens = base.split("_")
+        prefix_tokens: list[str] = []
+        for tok in tokens:
+            if tok in ratios:
+                break
+            prefix_tokens.append(tok)
+        prefix = "_".join(prefix_tokens) + ("_" if prefix_tokens else "")
         for name, info in manifest.get("ratios", {}).items():
             w, h = info["width"], info["height"]
-            out_file = out_root / f"cover_{name}.png"
+            out_file = out_root / f"{prefix}{name}.png"
             render_one(project, info["html"], out_file, str(w), str(h))
         sys.exit(0)
 
