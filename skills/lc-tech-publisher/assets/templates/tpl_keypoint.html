@@ -14,9 +14,10 @@
     <style>
       :root {
         --canvas: #fafbfc; --surface: #ffffff; --ink: #171718;
-        --ink-200: #4e5159; --ink-300: #6b6e75; --ink-400: #888d98;
+        --ink-200: #4e5159; --ink-300: #565a63; --ink-400: #6b6e75;
         --line: #e0e2e8; --line-strong: #b4b8c2;
-        --accent: #0a72ef; --accent-soft: rgba(10,114,239,0.10); --accent-hair: rgba(10,114,239,0.40);
+        --accent: #0a72ef; --accent-text: #0a63d0;
+        --accent-soft: rgba(10,114,239,0.10); --accent-hair: rgba(10,114,239,0.40);
         --shadow-rest: rgba(23,23,23,0.06) 0 0 0 1px, rgba(23,23,23,0.04) 0 1px 2px, #ffffff 0 0 0 1px inset;
       }
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,7 +69,7 @@
         display: flex; align-items: center; gap: 12px; opacity: 0.7;
       }
       .lockup img { width: 30px; height: 30px; }
-      .lockup span { font-family: "JetBrains Mono", monospace; font-size: calc(15px * var(--scale)); font-weight: 700; color: var(--ink-300); letter-spacing: .14em; }
+      .lockup span { font-family: "DM Sans", sans-serif; font-size: calc(18px * var(--scale)); font-weight: 700; color: var(--ink-300); letter-spacing: -0.02em; }
     </style>
   </head>
   <body>
@@ -90,7 +91,7 @@
       </svg>
       <div class="accent-rule"></div>
 
-      <div class="lockup"><img src="{{LOGO}}" alt="" /><span>LONG CIPHER</span></div>
+      <div class="lockup"><img src="{{LOGO}}" alt="" /><span>LongCipher</span></div>
 
       <div class="stage">
         <div class="eyebrow">{{EYEBROW}}</div>
