@@ -12,7 +12,7 @@ Usage:
   python3 scripts/edge_tts.py \
       --text "你好，世界" \
       --out scene-01.wav \
-      --voice zh-CN-yunxi --rate "-2%" --volume "+0%"
+      --voice zh-CN-YunxiNeural --rate "-2%" --volume "+0%"
 
 Environment:
   TTS_PY   interpreter with edge_tts installed (default: sys.executable)
@@ -20,7 +20,7 @@ Environment:
 Notes:
   - Output is saved as WAV (16-bit PCM) via ffmpeg, so the TS pipeline can
     measure duration uniformly with ffprobe regardless of the backend.
-  - Voices: zh-CN-yunxi (male, default), zh-CN-XiaoxiaoNeural (female), etc.
+  - Voices: zh-CN-YunxiNeural (male, default), zh-CN-XiaoxiaoNeural (female), etc.
 """
 
 import argparse
@@ -31,7 +31,7 @@ import subprocess
 import sys
 import tempfile
 
-DEFAULT_VOICE = "zh-CN-yunxi"
+DEFAULT_VOICE = "zh-CN-YunxiNeural"
 
 
 def die(msg):
@@ -46,6 +46,7 @@ async def _synth(text, out_path, voice, rate, volume):
     # real PyPI package.
     import os  # noqa: E402
     import sys  # noqa: E402
+    import time  # noqa: E402
 
     _self_dir = os.path.dirname(os.path.abspath(__file__))
     # Remove the script's own directory (and cwd alias) so `import edge_tts`
@@ -55,20 +56,33 @@ async def _synth(text, out_path, voice, rate, volume):
     sys.modules.pop("edge_tts", None)
     import edge_tts  # noqa: E402
 
-    with tempfile.TemporaryDirectory() as td:
-        mp3 = os.path.join(td, "clip.mp3")
-        communicate = edge_tts.Communicate(text, voice, rate=rate, volume=volume)
-        await communicate.save(mp3)
-        # transcode to WAV (16-bit PCM) so ffprobe duration is uniform
-        res = subprocess.run(
-            ["ffmpeg", "-y", "-i", mp3, "-acodec", "pcm_s16le", out_path],
-            capture_output=True,
-            text=True,
-        )
-        if res.returncode != 0:
-            die(f"ffmpeg transcode failed: {res.stderr.strip()[-500:]}")
-    print(f"✓ {out_path} (voice={voice})", file=sys.stderr)
-    return out_path
+    # Edge TTS occasionally drops a stream mid-request (NoAudioReceived),
+    # especially on longer segments. Retry with linear backoff so the
+    # publisher pipeline is resilient to transient network blips.
+    max_attempts = 6
+    last_err = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                mp3 = os.path.join(td, "clip.mp3")
+                communicate = edge_tts.Communicate(text, voice, rate=rate, volume=volume)
+                await communicate.save(mp3)
+                # transcode to WAV (16-bit PCM) so ffprobe duration is uniform
+                res = subprocess.run(
+                    ["ffmpeg", "-y", "-i", mp3, "-acodec", "pcm_s16le", out_path],
+                    capture_output=True,
+                    text=True,
+                )
+                if res.returncode != 0:
+                    die(f"ffmpeg transcode failed: {res.stderr.strip()[-500:]}")
+            print(f"✓ {out_path} (voice={voice})", file=sys.stderr)
+            return out_path
+        except Exception as e:  # transient stream error
+            last_err = e
+            if attempt < max_attempts:
+                sys.stderr.write(f"· edge-tts retry {attempt}/{max_attempts}: {e}\n")
+                time.sleep(2.0 * attempt)
+    die(f"edge_tts failed after {max_attempts} attempts: {last_err}")
 
 
 def synth_one(text, out_path, voice, rate, volume):

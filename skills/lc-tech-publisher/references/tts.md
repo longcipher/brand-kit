@@ -1,12 +1,23 @@
 # TTS Reference — Edge Neural TTS (Default) & CosyVoice3 (Optional)
 
-Narration is produced by one of two backends, selected with `--tts` on
+The script's `podcast[]` (zh) / `podcastEn[]` (en) is a **two-speaker dialogue**.
+Each turn carries a `speaker` (`"male"` | `"female"`), and the voice is resolved
+per speaker. The bilingual pipeline runs `generate_audio.py` **twice** (`--lang zh`,
+then `--lang en`); the EN pass synthesizes every turn with a single English voice.
+
+| Language | Speaker | Default Edge voice | Persona |
+|----------|---------|--------------------|---------|
+| zh | `male`   | `zh-CN-YunxiNeural` (override `roles.maleVoice`) | 老高式 — confident, witty explainer |
+| zh | `female` | `zh-CN-XiaoxiaoNeural` (override `roles.femaleVoice`, alt `zh-CN-XiaoyiNeural`) | 小茉式 — curious questioner |
+| en | both | `en-US-AndrewNeural` (override `meta.enVoice` / `--en-voice`) | single EN narrator for both roles |
+
+Audio is produced by one of two backends, selected with `--tts` on
 `scripts/generate_audio.py`:
 
-| Backend | `--tts` | Voice | Needs internet? | Needs reference voice? | Python deps |
-|---------|---------|-------|-----------------|------------------------|-------------|
-| **Edge Neural TTS** (default) | `edge` | `zh-CN-yunxi` (built-in voices) | yes | no | `edge-tts` (in pyproject, `uv sync`) |
-| **CosyVoice3** (optional) | `cosyvoice` | your brand voice (cloned) | no | yes (`--prompt-wav`) | torch + CosyVoice repo + model |
+| Backend | `--tts` | Voices | Needs internet? | Needs reference voice? | Python deps |
+|---------|---------|--------|-----------------|------------------------|-------------|
+| **Edge Neural TTS** (default) | `edge` | `zh-CN-YunxiNeural` + `zh-CN-XiaoxiaoNeural` (built-in) | yes | no | `edge-tts` (in pyproject, `uv sync`) |
+| **CosyVoice3** (optional) | `cosyvoice` | your brand voice (cloned, both speakers) | no | yes (`--prompt-wav`) | torch + CosyVoice repo + model |
 
 The whole pipeline is Python (managed with `uv`); the two TTS backends are thin
 Python shims (`scripts/edge_tts.py`, `scripts/cosyvoice_tts.py`) invoked by
@@ -20,7 +31,8 @@ Python shims (`scripts/edge_tts.py`, `scripts/cosyvoice_tts.py`) invoked by
 Microsoft Edge Neural TTS streams high-quality neural voices **for free, with
 no API key and no model download**. The only requirement is `edge_tts` plus an
 internet connection at synth time. It is the default backend precisely because
-it needs **no reference recording** — you can publish immediately.
+it needs **no reference recording** — you can publish immediately, with two
+distinct built-in voices for the dialogue.
 
 ### Setup (one-time)
 
@@ -32,29 +44,32 @@ uv sync          # installs edge-tts into the project .venv
 
 ```bash
 uv run python scripts/generate_audio.py --script dist/script.json --out dist
-# equivalent to: --tts edge --voice zh-CN-yunxi --rate "-2%" --volume "+0%"
+# equivalent to: --tts edge --male-voice zh-CN-YunxiNeural \
+#   --female-voice zh-CN-XiaoxiaoNeural --rate "-2%" --volume "+0%"
 ```
 
-Overridable env vars: `EDGE_TTS_VOICE`, `EDGE_TTS_RATE`, `EDGE_TTS_VOLUME`,
-`TTS_PY` (interpreter with `edge_tts`).
+Overridable env vars: `EDGE_TTS_MALE`, `EDGE_TTS_FEMALE`, `EDGE_TTS_RATE`,
+`EDGE_TTS_VOLUME`, `TTS_PY` (interpreter with `edge_tts`). A single turn can
+override its voice inline via `podcast[i].voice`.
 
 ### Common voices
 
 | Voice | Speaker |
 |-------|---------|
-| `zh-CN-yunxi` (default) | Male, calm teacher |
-| `zh-CN-XiaoxiaoNeural` | Female, warm |
+| `zh-CN-YunxiNeural` (male default) | Male, confident teacher |
+| `zh-CN-XiaoxiaoNeural` (female default) | Female, warm |
+| `zh-CN-XiaoyiNeural` | Female, alternate |
 | `zh-CN-YunyangNeural` | Male, newscaster |
 
 ### The shim
 
 `scripts/edge_tts.py` calls `edge_tts.Communicate(text, voice, rate=, volume=).save()`
-to MP3, then transcodes to 16-bit PCM WAV via ffmpeg so the TS side can measure
+to MP3, then transcodes to 16-bit PCM WAV via ffmpeg so the pipeline can measure
 duration uniformly with ffprobe. Flags mirror the HyperFrames reference script:
 
 ```bash
-python3 scripts/edge_tts.py --text scene-01.txt --out scene-01.wav \
-    --voice zh-CN-yunxi --rate "-2%" --volume "+0%"
+python3 scripts/edge_tts.py --text turn-01.txt --out turn-01.wav \
+    --voice zh-CN-YunxiNeural --rate "-2%" --volume "+0%"
 ```
 
 ---
@@ -63,7 +78,9 @@ python3 scripts/edge_tts.py --text scene-01.txt --out scene-01.wav \
 
 Switch to CosyVoice3 when you want a **consistent house narrator** via zero-shot
 voice cloning. It is local (no API key, no internet) but requires a one-time
-reference recording and the CosyVoice environment.
+reference recording and the CosyVoice environment. Note: CosyVoice clones a
+single reference voice, so both speakers render with that one cloned voice
+(`voice_for` = `None` for both in `generate_audio.py`).
 
 ### Setup (one-time)
 
@@ -103,7 +120,7 @@ uv run python scripts/generate_audio.py --script dist/script.json --tts cosyvoic
 
 `scripts/cosyvoice_tts.py` loads the model once per process and synthesizes one
 WAV via `inference_zero_shot`. Output WAV sample rate follows the model
-(24k/25k); the TS side transcodes / measures duration upstream.
+(24k/25k); the pipeline transcodes / measures duration upstream.
 
 ---
 
@@ -114,36 +131,41 @@ WAV via `inference_zero_shot`. Output WAV sample rate follows the model
 | Edge | `--rate` | `-10%` | `-2%` | `+5%` |
 | CosyVoice3 | `--speed` | `0.8–0.9` | `1.0` | `1.1–1.2` |
 
-## 4. Timestamps
+## 4. Speaker Timeline Metadata (`speaker_timestamps.json`)
 
-Neither backend returns word timestamps; scene-level timing is derived
+Neither backend returns word timestamps; turn-level timing is derived
 deterministically:
 
-1. Synthesize one WAV per scene: `audio/scene-NN.wav`.
+1. Synthesize one WAV per dialogue turn: `audio/turn-NN.wav`.
 2. Measure each WAV's duration with ffprobe.
-3. Build cumulative `start`/`end` in `dist/timestamps.json`:
+3. Build cumulative `start`/`end` in `dist/speaker_timestamps.json`:
 
 ```json
 {
-  "total": 62.4,
+  "total": 92.4,
   "engine": "edge-tts",
-  "voice": "zh-CN-yunxi",
-  "scenes": [
-    { "id": "01", "start": 0.0,  "end": 11.2, "duration": 11.2 },
-    { "id": "02", "start": 11.2, "end": 23.9, "duration": 12.7 }
+  "voices": { "male": "zh-CN-YunxiNeural", "female": "zh-CN-XiaoxiaoNeural" },
+  "turns": [
+    { "id": "01", "speaker": "male",   "voice": "zh-CN-YunxiNeural",   "text": "今天我们来聊…", "file": "audio/turn-01.wav", "start": 0.0,  "end": 7.2,  "duration": 7.2 },
+    { "id": "02", "speaker": "female", "voice": "zh-CN-XiaoxiaoNeural", "text": "那是什么意思？", "file": "audio/turn-02.wav", "start": 7.2,  "end": 12.9, "duration": 5.7 }
   ]
 }
 ```
 
+This file is the **absolute timeline** for the video: `build_composition.py`
+consumes `turns[].start/end/duration` to place caption clips and align panels,
+and `turns[].speaker` to color captions. Caption text == `turns[].text`.
+
 If word-level karaoke highlighting is ever required, run
-`npx --yes hyperframes transcribe <wav> --model small` per scene.
+`npx --yes hyperframes transcribe <wav> --model small` per turn.
 
 ## 5. Podcast Assembly
 
-`generate-audio.mjs` concatenates the per-scene WAVs into `dist/podcast_full.wav`
+`generate_audio.py` concatenates the per-turn WAVs into `dist/podcast_full.wav`
 with ffmpeg, then transcodes to MP3:
 
 ```bash
 ffmpeg -y -f concat -safe 0 -i list.txt -c copy dist/podcast_full.wav
 ffmpeg -y -i dist/podcast_full.wav -codec:a libmp3lame -qscale:a 2 dist/podcast_full.mp3
 ```
+

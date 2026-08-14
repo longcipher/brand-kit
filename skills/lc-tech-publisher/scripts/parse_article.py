@@ -9,7 +9,11 @@ Two modes:
        uv run python scripts/parse_article.py --validate dist/script.json
 
 The outline is a *raw* skeleton — headings, code blocks, paragraphs. The agent
-(LLM) uses it to author the final script.json with scenes + narration.
+(LLM) uses it to author the final script.json: a two-speaker dialogue
+(`podcast[]`) plus ordered visual slides (`slides[]` of type keypoint /
+three_points / outro). The script is domain-agnostic — knowledge share or daily
+digest. Visual styling lives entirely in the fixed component templates; the LLM
+only emits structured JSON (no CSS).
 """
 
 from __future__ import annotations
@@ -38,6 +42,81 @@ def warn(msg: str) -> None:
     sys.stderr.write(f"! {msg}\n")
 
 
+def _validate_dialogue(podcast, key: str, errors: list[str]) -> None:
+    if not isinstance(podcast, list) or not podcast:
+        errors.append(f"{key}[] must be a non-empty array of dialogue turns")
+        return
+    valid_speakers = {"male", "female"}
+    for i, t in enumerate(podcast):
+        if not isinstance(t, dict):
+            errors.append(f"{key}[{i}] must be an object")
+            continue
+        sp = t.get("speaker")
+        if sp not in valid_speakers:
+            errors.append(f"{key}[{i}].speaker must be 'male' or 'female' (got {sp!r})")
+        if not t.get("text"):
+            errors.append(f"{key}[{i}].text is required (the spoken line)")
+        if t.get("voice") is not None and not isinstance(t.get("voice"), str):
+            errors.append(f"{key}[{i}].voice must be a string if present")
+
+
+def _validate_ticker(ticker, key: str, errors: list[str]) -> None:
+    # ticker is now optional (knowledge mode may omit it); kept for digest compatibility.
+    if ticker is None:
+        return
+    if not isinstance(ticker, list):
+        errors.append(f"{key} must be an array")
+        return
+    for i, it in enumerate(ticker):
+        if not isinstance(it, dict) or not it.get("label"):
+            errors.append(f"{key}[{i}] must be {{label, value?, change?, dir?}}")
+
+
+VALID_SLIDE_TYPES = {"keypoint", "three_points", "outro", "table"}
+
+
+def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> None:
+    """Validate the slides[] array (keypoint / three_points / outro / table)."""
+    if not isinstance(slides, list) or not slides:
+        errors.append(f"{key}[] must be a non-empty array of slide objects")
+        return
+    for i, s in enumerate(slides):
+        if not isinstance(s, dict):
+            errors.append(f"{key}[{i}] must be an object")
+            continue
+        stype = s.get("type")
+        if stype not in VALID_SLIDE_TYPES:
+            errors.append(f"{key}[{i}].type must be one of {sorted(VALID_SLIDE_TYPES)} (got {stype!r})")
+            continue
+        if stype == "keypoint":
+            if not s.get("statement"):
+                errors.append(f"{key}[{i}].statement is required for keypoint slides")
+        elif stype == "three_points":
+            pts = s.get("points")
+            if not isinstance(pts, list) or len(pts) != 3:
+                errors.append(f"{key}[{i}].points must be an array of exactly 3 for three_points")
+            else:
+                for j, p in enumerate(pts):
+                    if not p.get("title") or not p.get("body"):
+                        errors.append(f"{key}[{i}].points[{j}] needs title + body")
+        elif stype == "table":
+            if not isinstance(s.get("head"), list) or not s.get("head"):
+                errors.append(f"{key}[{i}].head must be a non-empty array (column headers) for table slides")
+            rows = s.get("rows")
+            if not isinstance(rows, list) or not rows:
+                errors.append(f"{key}[{i}].rows must be a non-empty array for table slides")
+            else:
+                ncols = len(s.get("head", []))
+                for j, r in enumerate(rows):
+                    if not isinstance(r, list) or (ncols and len(r) != ncols):
+                        errors.append(f"{key}[{i}].rows[{j}] must have {ncols} cells matching head")
+        elif stype == "outro":
+            if not s.get("recap"):
+                errors.append(f"{key}[{i}].recap is required for outro slides")
+    if not any(s.get("type") == "outro" for s in slides):
+        warns.append(f"{key}[] has no outro slide — one will be auto-appended")
+
+
 def validate_mode(path: str) -> None:
     try:
         data = json.loads(read(path))
@@ -47,37 +126,42 @@ def validate_mode(path: str) -> None:
     errors: list[str] = []
     warns: list[str] = []
 
-    if not data.get("meta", {}).get("title"):
+    if not isinstance(data, dict):
+        die(f"{path} must be a JSON object")
+
+    meta = data.get("meta") or {}
+    if not isinstance(meta, dict):
+        errors.append("meta must be an object")
+        meta = {}
+    if not meta.get("title"):
         errors.append("meta.title is required")
-    if not data.get("meta", {}).get("lang"):
+    if not meta.get("lang"):
         warns.append("meta.lang missing — defaulting to zh")
-    if not data.get("cover", {}).get("title"):
+
+    cover = data.get("cover") or {}
+    if not isinstance(cover, dict):
+        errors.append("cover must be an object")
+    if not cover.get("title"):
         errors.append("cover.title is required")
-    if not isinstance(data.get("scenes"), list):
-        errors.append("scenes must be an array")
 
-    scenes = data.get("scenes", [])
-    if isinstance(scenes, list):
-        if len(scenes) < 5:
-            errors.append(f"scenes must have 5–8 entries (got {len(scenes)})")
-        if len(scenes) > 8:
-            errors.append(f"scenes must have 5–8 entries (got {len(scenes)})")
-        for i, s in enumerate(scenes):
-            if not s.get("id"):
-                errors.append(f"scenes[{i}].id is required")
-            if not s.get("title"):
-                errors.append(f"scenes[{i}].title is required")
-            if not s.get("narration"):
-                errors.append(f"scenes[{i}].narration is required (spoken + captioned text)")
-            pts = s.get("points")
-            if pts is not None and (not isinstance(pts, list) or len(pts) > 4):
-                errors.append(
-                    f"scenes[{i}].points must be 2–4 bullets (got {len(pts) if isinstance(pts, list) else 'n/a'})"
-                )
-
+    # ── Primary (zh) dialogue + slides ──
     podcast = data.get("podcast")
-    if podcast is not None and not isinstance(podcast, list):
-        errors.append("podcast (if present) must be an array of {role, text}")
+    slides = data.get("slides")
+    _validate_dialogue(podcast, "podcast", errors)
+    _validate_ticker(data.get("ticker"), "ticker", errors)
+    _validate_panels(slides, "slides", errors, warns)
+
+    # ── Optional English variants (en video). Validate shape if present. ──
+    if data.get("podcastEn") is not None:
+        _validate_dialogue(data.get("podcastEn"), "podcastEn", errors)
+    if data.get("tickerEn") is not None:
+        _validate_ticker(data.get("tickerEn"), "tickerEn", errors)
+    if data.get("slidesEn") is not None:
+        _validate_panels(data.get("slidesEn"), "slidesEn", errors, warns)
+    if data.get("coverEn") is not None:
+        ce = data.get("coverEn")
+        if not isinstance(ce, dict) or not ce.get("title"):
+            errors.append("coverEn.title is required when coverEn is present")
 
     if errors:
         sys.stderr.write("✗ script.json validation failed:\n")
@@ -90,20 +174,24 @@ def validate_mode(path: str) -> None:
         sys.exit(1)
 
     # Fill defaults
-    meta = data.setdefault("meta", {})
+    data["meta"] = meta
     meta["lang"] = meta.get("lang") or "zh"
     if not meta.get("kicker"):
-        meta["kicker"] = "TECH EXPLAINER"
+        meta["kicker"] = "TECH BRIEF"
+    if not meta.get("roles"):
+        meta["roles"] = {"male": "主讲", "female": "主持"}
+    # rough target length estimate from dialogue text
     if not meta.get("target_seconds"):
-        total_chars = sum(len(s.get("narration", "")) for s in scenes)
+        total_chars = sum(len(t.get("text", "")) for t in podcast)
         meta["target_seconds"] = round(total_chars / 3.4)
-    cover = data.setdefault("cover", {})
+    data["cover"] = cover
     if not cover.get("kicker"):
         cover["kicker"] = meta["kicker"]
 
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     sys.stdout.write(
-        f"✓ script.json valid: {len(scenes)} scenes, target ~{meta['target_seconds']}s, lang={meta['lang']}\n"
+        f"✓ script.json valid: {len(podcast)} dialogue turns, "
+        f"{len(slides or [])} slides, target ~{meta['target_seconds']}s, lang={meta['lang']}\n"
     )
     sys.exit(0)
 
@@ -177,7 +265,7 @@ def extract_outline(input_path: str, output_path: str) -> None:
     out.write_text(json.dumps(outline, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     sys.stdout.write(
         f"✓ outline written to {output_path}\n{outline['summary']}\n"
-        f"\nNow author dist/script.json (scenes + narration) from this outline, then:\n"
+        f"\nNow author dist/script.json (podcast[] dialogue + slides[]) from this outline, then:\n"
         f"  uv run python scripts/parse_article.py --validate dist/script.json\n"
     )
     sys.exit(0)

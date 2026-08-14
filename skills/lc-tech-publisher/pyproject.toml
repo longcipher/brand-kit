@@ -2,10 +2,10 @@
 name = "lc-tech-publisher"
 version = "0.1.0"
 description = "LongCipher branded media package generator (cover + podcast + video) built on HyperFrames"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 dependencies = [
     # Default TTS backend (Microsoft Edge Neural TTS). Needs internet at synth time.
-    "edge-tts>=6.1.0",
+    "edge-tts>=7.2.8",
 ]
 
 [project.optional-dependencies]
@@ -16,8 +16,8 @@ cosyvoice = []
 # Dev tooling (lint / format / test). Install with: uv sync --group dev
 [dependency-groups]
 dev = [
-    "ruff>=0.8",
-    "pytest>=8",
+    "ruff>=0.16.2",
+    "pytest>=9.1.1",
 ]
 
 # This is a script collection, not an importable package. Invoke scripts with:

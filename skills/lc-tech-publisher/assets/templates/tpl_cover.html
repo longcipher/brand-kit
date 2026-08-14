@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="{{LANG}}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{TITLE}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+      :root {
+        --canvas: #fafbfc;
+        --surface: #ffffff;
+        --ink: #171718;
+        --ink-200: #4e5159;
+        --ink-300: #565a63;
+        --ink-400: #6b6e75;
+        --line: #e0e2e8;
+        --line-strong: #b4b8c2;
+        --accent: #0a72ef;
+        --accent-text: #0a63d0;
+        --accent-soft: rgba(10, 114, 239, 0.10);
+        --accent-hair: rgba(10, 114, 239, 0.40);
+        --shadow-rest: rgba(23,23,23,0.06) 0 0 0 1px, rgba(23,23,23,0.04) 0 1px 2px, #ffffff 0 0 0 1px inset;
+        --shadow-elev: rgba(23,23,23,0.10) 0 0 0 1px, rgba(23,23,23,0.10) 0 4px 12px, rgba(23,23,23,0.06) 0 12px 28px;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: {{WIDTH}}px; height: {{HEIGHT}}px; background: var(--canvas);
+        overflow: hidden;
+        font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+      }
+      [data-composition-id] { position: relative; width: {{WIDTH}}px; height: {{HEIGHT}}px; overflow: hidden; }
+
+      /* calm hairline grid (no glow) */
+      #bg-grid { position: absolute; inset: 0; z-index: 0; opacity: 1; }
+      .lockup {
+        position: absolute; top: 5.5%; left: 6%;
+        display: flex; align-items: center; gap: 14px; z-index: 6;
+      }
+      .lockup img { width: 34px; height: 34px; }
+      .lockup span {
+        font-family: "JetBrains Mono", monospace;
+        font-size: calc(18px * var(--scale)); font-weight: 700;
+        color: var(--ink-300); letter-spacing: .14em;
+      }
+      .corner-tag {
+        position: absolute; top: 5.5%; right: 6%;
+        font-family: "JetBrains Mono", monospace;
+        font-size: calc(16px * var(--scale)); letter-spacing: .14em;
+        text-transform: uppercase;         color: var(--accent-text);
+        border: 1px solid var(--accent-hair); padding: 6px 10px; z-index: 6;
+      }
+
+      .center {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: 86%; z-index: 5;
+      }
+      .kicker {
+        font-family: "JetBrains Mono", monospace;
+        font-size: calc(18px * var(--scale));
+        letter-spacing: .18em; text-transform: uppercase; color: var(--accent-text);
+        margin-bottom: calc(20px * var(--scale));
+        display: flex; align-items: center; gap: 14px;
+      }
+      .kicker::before { content: ""; width: 32px; height: 2px; background: var(--accent); }
+      .title {
+        font-size: calc(62px * var(--scale)); font-weight: 800; line-height: 1.08;
+        letter-spacing: -0.02em; color: var(--ink); max-width: 1500px;
+      }
+      .title .accent { color: var(--accent); }
+      .sub {
+        margin-top: calc(20px * var(--scale)); font-size: calc(24px * var(--scale));
+        font-weight: 400; color: var(--ink-200); line-height: 1.4; max-width: 1300px;
+      }
+
+      /* headline bullets — raise cover information density */
+      .headlines {
+        margin: calc(30px * var(--scale)) auto 0; width: 100%;
+        display: flex; flex-direction: column; gap: calc(14px * var(--scale));
+        border-top: 1px solid var(--line); padding-top: calc(24px * var(--scale));
+      }
+      .headlines .hl-head {
+        font-family: "JetBrains Mono", monospace;
+        font-size: calc(14px * var(--scale)); letter-spacing: .14em;
+        text-transform: uppercase; color: var(--ink-400);
+        margin-bottom: calc(6px * var(--scale));
+      }
+      .headlines ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: calc(12px * var(--scale)) calc(28px * var(--scale)); }
+      .headlines li {
+        display: flex; align-items: baseline; gap: calc(12px * var(--scale));
+        font-size: calc(19px * var(--scale)); line-height: 1.36; color: var(--ink-200);
+      }
+      .headlines .hl-idx {
+        flex: 0 0 auto; color: var(--accent-text); font-family: "JetBrains Mono", monospace;
+        font-weight: 700;
+      }
+      .headlines .hl-txt b, .headlines .hl-txt strong { color: var(--ink); font-weight: 700; }
+
+      .meta-row {
+        position: absolute; bottom: 5.5%; left: 6%; right: 6%;
+        display: flex; justify-content: space-between; align-items: baseline; z-index: 6;
+      }
+      .meta-row .left, .meta-row .right {
+        font-family: "JetBrains Mono", monospace;
+        font-size: calc(15px * var(--scale));
+        color: var(--ink-300); letter-spacing: .1em; text-transform: uppercase;
+      }
+      .meta-row .center-bar {
+        flex: 1; height: 1px; margin: 0 18px; background: var(--line);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="cover-root"
+      data-composition-id="cover"
+      data-width="{{WIDTH}}"
+      data-height="{{HEIGHT}}"
+      data-start="0"
+      data-duration="2.8"
+    >
+      <svg id="bg-grid" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 1920 1080">
+        <defs>
+          <pattern id="grid-pat-cover" width="64" height="64" patternUnits="userSpaceOnUse">
+            <path d="M64 0 H0 V64" fill="none" stroke="rgba(23,23,23,0.045)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#grid-pat-cover)"/>
+      </svg>
+
+      <div class="lockup">
+        <img src="{{LOGO}}" alt="" />
+        <span>LongCipher</span>
+      </div>
+      <div class="corner-tag">{{CORNER_TAG}}</div>
+
+      <div class="center">
+        <div class="kicker">{{KICKER}}</div>
+        <div class="title">{{TITLE}}</div>
+        <div class="sub">{{SUBTITLE}}</div>
+        <div class="headlines">
+          <div class="hl-head">{{HEADLINES_LABEL}}</div>
+          <ul>
+{{HEADLINES}}
+          </ul>
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <span class="left">{{META_LEFT}}</span>
+        <span class="center-bar"></span>
+        <span class="right">{{META_RIGHT}}</span>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+      tl.fromTo(".lockup", { x: -16, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.5 }, 0.1);
+      tl.fromTo(".corner-tag", { x: 16, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.5 }, 0.1);
+      tl.fromTo(".kicker", { x: -16, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.fromTo(".title", { y: 26, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.8, ease: "power3.out" }, 0.35);
+      tl.fromTo(".sub", { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.6, ease: "power2.out" }, 0.65);
+      tl.fromTo(".headlines", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5 }, 0.9);
+      tl.fromTo(".headlines li", { x: -16, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.5, stagger: 0.1, ease: "power2.out" }, 1.0);
+      tl.fromTo(".meta-row", { y: 14, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5 }, 0.85);
+      window.__timelines["cover"] = tl;
+    </script>
+  </body>
+</html>

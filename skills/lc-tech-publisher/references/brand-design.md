@@ -1,158 +1,151 @@
-# LongCipher Brand Design System (Video & Cover Tokens)
+# LongCipher Render-Side Visual System (Light)
 
-This is the render-side distillation of the LongCipher design system. The full spec lives in the repo root `DESIGN.md`; every token below is a *hard rule* for generated HTML. Do not invent colors, weights, or spacings outside this document.
+This is the render-side distillation of the LongCipher **light** design system
+(`DESIGN.md` is the source of truth). Every token below is a *hard rule* for the
+fixed component templates. The skill is **fixed-template**: the LLM only ever
+outputs structured JSON (`script.json`); all visual styling lives in the 4
+hand-built component templates. This guarantees 100% visual control — the LLM
+never writes CSS.
 
-## Design Philosophy
+## 0. Non-negotiable (anti AI-default)
 
-- **Earn your pixel.** Every element on screen justifies itself. If removal doesn't break comprehension, remove it.
-- **Content is king.** The surface disappears; the information stands. Whitespace is structure, not emptiness.
-- **Consistency over novelty.** Reuse tokens and rhythms. Surprise belongs in the content, not the chrome.
-- **Mono is the voice of the platform.** Technical eyebrows, code, and labels live in JetBrains Mono.
+- **No AI-default fonts.** Use **DM Sans** (UI/headings) + **JetBrains Mono**
+  (data/eyebrows). Never Inter/Roboto/Geist.
+- **No rounded, pillowy corners.** 2px ceiling everywhere (`Radius 2px`).
+  No pills, no circular avatars.
+- **No second accent hue.** Single brand blue `#0a72ef` only. Direction uses
+  neutral ink, not red/green traffic-light colors (we are a knowledge brand, not
+  a trading terminal — see §6 for the one allowed semantic exception).
+- **No mesh gradients, no glow auras, no blob logos, no shimmer.**
+- **Depth via shadow-as-border**, not CSS borders on primary surfaces.
 
-## 1. Colors
-
-### Surfaces
-
-| Token | Light | Dark | Use |
-|-------|-------|------|-----|
-| `background-100` | `#fafbfc` | `#0a0a0c` | Primary canvas (default for explainer scenes) |
-| `background-200` | `#f6f7f9` | `#2a2d33` | Secondary surface, subtle separation |
-| `ink-100` | `#171718` | `#ededed` | Primary text, headings |
-| `ink-900` | `#4e5159` | `#b4b8c2` | Secondary text, body copy |
-| `ink-700` | `#888d98` | `#888d98` | Muted captions, metadata |
-| `hairline` | `#e0e2e8` | `#2a2d33` | Borders, dividers, hairlines |
-
-### Accent (state + link only)
+## 1. Color (Light)
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| `blue-700` | `#0a72ef` | The **single** accent — links, focus, keywords, the one emphasized moment per scene |
-| `red-700` | `#ff5b4f` | Errors, destructive (rarely on screen) |
+| `--canvas` | `#fafbfc` | Page / video background (subtle blue tint) |
+| `--surface` | `#ffffff` | Cards / elevated panels |
+| `--ink` | `#171718` | Primary text, headings (near-black, slight blue tint) |
+| `--ink-200` | `#4e5159` | Secondary text on light |
+| `--ink-300` | `#565a63` | Muted captions, metadata, eyebrows (passes WCAG AA on light) |
+| `--ink-400` | `#6b6e75` | Faint labels, dividers text (passes WCAG AA on light) |
+| `--line` | `#e0e2e8` | Hairline borders / dividers (neutral-300) |
+| `--line-strong` | `#b4b8c2` | Slightly stronger dividers |
+| `--accent` | `#0a72ef` | The single brand blue — lines, borders, dots |
+| `--accent-text` | `#0a63d0` | Slightly darker brand blue for text usage — passes WCAG AA on light |
+| `--accent-soft` | `rgba(10,114,239,0.10)` | Faint accent wash (chart fill, hover) |
+| `--accent-hair` | `rgba(10,114,239,0.40)` | Accent hairline border |
 
-**Accent budget:** one accent only — `#0a72ef`. No second hue, no rainbow, no pink/amber/green multi-accent. Blue is used for keywords/emphasis only; solid blue for the single most important moment per scene.
-
-### Atmosphere (restrained, single-blue)
-
-No rainbow mesh gradients. The only atmospheric device is a single, low-alpha blue radial wash, used sparingly as a large backdrop — never miniaturized, never as an icon.
-
+Shadow-as-border stack (rest):
 ```css
-/* Hero atmosphere — covers and scene intro backgrounds only */
-.bg-atmosphere {
-  background:
-    radial-gradient(1000px 600px at 25% 30%, rgba(10,114,239,0.10), transparent 65%),
-    radial-gradient(900px 700px at 80% 40%, rgba(10,114,239,0.06), transparent 60%);
-}
+box-shadow:
+  rgba(23,23,23,0.06) 0 0 0 1px,
+  rgba(23,23,23,0.04) 0 1px 2px,
+  #ffffff 0 0 0 1px inset;
+```
+Elevated (popover/card emphasis):
+```css
+box-shadow:
+  rgba(23,23,23,0.10) 0 0 0 1px,
+  rgba(23,23,23,0.10) 0 4px 12px,
+  rgba(23,23,23,0.06) 0 12px 28px;
 ```
 
 ## 2. Typography
 
-### Font Families
-
 | Role | Family | Fallback |
 |------|--------|----------|
-| Sans (UI, prose, headings) | DM Sans | `system-ui, -apple-system, sans-serif` |
-| Mono (code, eyebrows, labels) | JetBrains Mono | `ui-monospace, SFMono-Regular, Menlo, monospace` |
+| Sans (UI, prose, headings) | **DM Sans** | `ui-sans-serif, system-ui, sans-serif` |
+| Mono (data, eyebrows, tickers, code) | **JetBrains Mono** | `ui-monospace, SFMono-Regular, monospace` |
 
-Use local/system fonts at render time — do not rely on CDN font fetches. System-ui is an acceptable substitute if DM Sans is not bundled.
+Fonts load via Google Fonts `<link>` (DM Sans weights 400/500/600/700/800,
+JetBrains Mono 400/500/700). Provide local fallbacks so a render without
+network degrades gracefully, not catastrophically.
 
-### Heading & Body Tokens (scaled for 1920×1080)
+Type scale (base for 1920×1080; scale down via `--scale` for portrait):
 
-| Token | Size | Weight | Line Height | Tracking | Use |
-|-------|------|--------|-------------|----------|-----|
-| `display` | 120px | 700 | 1.0 | `-0.02em` | Cover hero title |
-| `heading-1` | 72px | 700 | 1.1 | `-0.02em` | Scene headline |
-| `heading-2` | 48px | 600 | 1.15 | `-0.015em` | Sub-headline |
-| `copy` | 36px | 400 | 1.4 | `0` | Body, bullets |
-| `label` | 28px | 400 | 1.3 | `0` | Metadata, small text |
-| `eyebrow` | 24px | 400 | 1.2 | `0.08em` | Mono, uppercase corner label |
-| `code` | 30px | 400 | 1.5 | `0` | Mono code block |
-| `caption` | 44px | 600 | 1.2 | `-0.01em` | Bottom speech caption |
+| Token | Size | Weight | Use |
+|-------|------|--------|-----|
+| `display` | 88–104px | 800 | Hero / cover title (`-0.02em`) |
+| `heading-1` | 52–64px | 700 | Slide headline |
+| `stat-value` | 64–80px | 800 | Metric number (mono) |
+| `copy` | 30–38px | 400–500 | Body, card text |
+| `label` | 18–22px | 500 | Eyebrow, mono overlines (`0.12em` tracking, uppercase) |
+| `caption` | 34–40px | 600 | Bottom speech caption |
 
-**Rules:**
+## 3. Surfaces & Radius
 
-- Display/headings may use **700**; body stays 400. Avoid 800+.
-- Display and headings use **negative tracking** (`-0.02em`). Never positively letter-space DM Sans headings.
-- Sentence-case headlines. The deliberate period is part of the voice.
-- Mono for the technical layer only: eyebrows, code, terminal labels. Body paragraphs are never mono.
+- Cards: `background: var(--surface); box-shadow: <rest stack>; border-radius: 2px;`
+  Avoid flat `border` for primary surfaces; dividers may use `--line` hairlines.
+- Radius: **2px** for every element (cards, chips, inputs, thumbs). No pills.
+- Never pure-black text on pure-white without the `--ink` token; never neon.
 
-## 3. Spacing (4px base)
+## 4. Background System (calm, not "alive with glow")
 
-| Token | Value | Use |
-|-------|-------|-----|
-| `xxs` | 4px | Tight gaps |
-| `xs` | 8px | Inside-group gaps |
-| `sm` | 12px | Compact gaps |
-| `md` | 16px | Between-group gaps |
-| `lg` | 24px | Card padding |
-| `xl` | 32px | Section padding |
-| `2xl` | 40px | Large section padding |
-| `4xl` | 64px | Scene padding / margins |
+The light canvas is `#fafbfc`. Persistent, *subtle* layers (compositor-only
+transform/opacity):
 
-Rhythm: 8px inside a group → 16px between groups → 32–40px between sections.
+1. **Hairline grid** — an SVG `<pattern>` of 64px lines at `rgba(23,23,23,0.04)`.
+   Provides structure without noise. Not animated (or a very slow opacity breathe
+   ≤0.04 amplitude — optional).
+2. **Top scanline accent** — a single 1px horizontal line with a blue gradient
+   that sweeps once on hero (not a permanent glow).
+3. **Slide transitions** — each fixed component enters with a GSAP slide+fade;
+   only one component is on stage at a time (replaces the dark "panel swap").
 
-## 4. Shapes & Elevation
+Motion stays compositor-only (`transform`/`opacity`/`filter` only). No
+per-frame layout, no `transition: all`.
 
-| Token | Value |
-|-------|-------|
-| `radius-sm` | 2px (the only radius — cards, controls, code blocks) |
+## 5. Fixed Components (the only visual vocabulary)
 
-**No pills, no circular avatars, no 6/12/16px rounding.** Sharp, technical edges throughout.
+Built by hand as standalone HTML templates. The LLM outputs JSON; the builder
+injects data into these. **Four components:**
 
-**Shadow-as-border** — semi-transparent shadows replace borders for edge clarity:
+| # | Template | Drives | Purpose |
+|---|----------|--------|---------|
+| 1 | `tpl_cover.html` | `cover` + `headlines` | Cover card / video hero. Title, subtitle, kicker, 4 headline bullets, meta row. |
+| 2 | `tpl_keypoint.html` | `slides[]` where `type:"keypoint"` | A single highlighted statement / quote / key takeaway — large, centered, one accent line. |
+| 3 | `tpl_three_points.html` | `slides[]` where `type:"three_points"` | Exactly 3 structured points (title + body each) in a 3-up grid. |
+| 4 | `tpl_outro.html` | `slides[]` where `type:"outro"` | Closing card: recap line + sign-off + brand lockup. |
 
-```css
-.hairline {
-  box-shadow: inset 0 0 0 1px rgba(23, 23, 24, 0.08);
-}
-.card {
-  box-shadow:
-    0 2px 2px rgba(23, 23, 24, 0.04),
-    0 8px 8px -8px rgba(23, 23, 24, 0.04),
-    inset 0 0 0 1px rgba(23, 23, 24, 0.08);
-}
-```
+The video master (`dashboard.html`) is a thin timeline orchestrator: it lays the
+4 component renderings as full-frame **slides**, each a HyperFrames `clip` with
+`data-start`/`data-duration` aligned to the dialogue timeline, plus the persistent
+embedded single-line caption and the dialogue audio. The components themselves
+never change — only their injected data does.
 
-Dark theme: use `rgba(255,255,255,…)` alpha shadows instead.
+## 6. Semantic Exception (direction)
 
-## 5. Brand Lockup
+We are a knowledge brand, so we avoid red/green "trading" semantics. The single
+allowed deviation: when a number genuinely goes up/down and the data calls for
+direction, use **neutral ink** for the figure and a small mono tag
+(`▲ / ▼` or `+x% / -x%`) in `--ink-300`. Never use saturated `#10B981`/`#EF4444`.
+If absolutely required by a brief, a muted `--up #2f9e6b` / `--down #d9544c` may
+appear *only* inside a data table cell, never as a decorative glow.
 
-- **Logo:** the vector mark from `assets/logos/lc.svg` (monochrome geometric). Never stretch, never rotate the mark, never recolor it, never add a border or glow around it.
-- Lockup on covers: mark top-left at 48px, sized 120px, followed by the wordmark "LongCipher" in DM Sans 700, `#171718`.
-- The single-blue atmospheric wash is the only decoration. Do not stack additional decorations.
+## 7. Brand Lockup
 
-## 6. Layout Grid (1920×1080)
-
-- 64px outer margin, 24px gutter, 12-column grid.
-- Scene content column: max 1600px, centered.
-- Bottom caption zone: centered, y ≈ 980px, max width 1600px.
-- Code blocks: full content column width, `background-200`, hairline, radius-sm, mono 30px.
-- Eyebrow: top-left corner (48, 48), mono 24px, `#8f8f8f`, uppercase, letter-spacing 0.08em.
-
-## 7. Voice & Content
-
-- Active voice, second person: "Install the CLI", not "The CLI will be installed."
-- Concise. As few words as possible. Numerals for counts ("8 deployments").
-- Title Case / 中文标题句首大写 for headings; sentence case for body.
-- Non-breaking spaces in code: `10&nbsp;MB`, `⌘&nbsp;+&nbsp;K`.
-- Errors are constructive: state the problem and the exit, never just the problem.
+- `lc.svg` mark placed small (top-left or bottom corner) as a quiet watermark at
+  ~0.5 opacity, monochrome, never recolored, never given a glow.
+- Wordmark "LongCipher" in DM Sans 700, `--ink-300`, low emphasis.
 
 ## 8. Do / Don't
 
-**Do:**
+**Do:** keep edges sharp (2px); one blue accent; shadow-as-border; mono for all
+numbers/labels; captions readable (contrast ≥ 4.5:1 on the caption plate).
 
-- Cycle surfaces `background-100` → `background-200` → dark `ink-100` bands for depth.
-- Keep solid accent for one emphasized element per scene.
-- Set eyebrows, code, and terminal labels in mono.
-- Use hairline + stacked shadows instead of heavy borders.
-- Keep scenes airy — whitespace is the primary layout tool.
+**Don't:** introduce a 2nd accent hue; rounded/pill shapes; mesh/glow/shimmer;
+AI-default fonts; let the LLM emit inline styles or new classes — styling only
+lives in the fixed templates. Per-domain flavor (vocabulary, headline copy) lives
+**only** in `script.json` data, never in CSS.
 
-**Don't:**
+## 9. Content Modes (LLM picks one)
 
-- Don't introduce new accent colors beyond the single blue `#0a72ef`.
-- Don't use rainbow/mesh gradients or multi-color backdrops.
-- Don't use positive letter-spacing on DM Sans headings.
-- Don't render headings in all-caps (sentence case + negative tracking is non-negotiable).
-- Don't use weight 800+.
-- Don't mix rounded and sharp corners in one scene — corners are always 2px.
-- Don't put body copy in mono.
-- Don't use AI-default fonts (Geist, Inter, Roboto).
+- `mode: "knowledge"` — a single-topic deep dive. `slides[]` walk one concept:
+  cover → 2–3 `keypoint` → 1 `three_points` (mechanism/why/caveat) → `outro`.
+- `mode: "digest"` — a daily multi-item roundup. `slides[]`串联 the day's items:
+  cover → one `three_points` (today's 3 headlines) → several `keypoint` (each
+  item as a takeaway) → `outro`. The `headlines` on the cover already串 the day.
+
+The mode is a **prompting/structuring hint**, not a separate engine — both use
+the same 4 fixed components.

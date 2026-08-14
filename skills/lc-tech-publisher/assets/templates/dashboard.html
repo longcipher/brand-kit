@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="{{LANG}}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{TITLE}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+      :root {
+        --canvas: #fafbfc; --surface: #ffffff; --ink: #171718;
+        --ink-200: #4e5159; --ink-300: #565a63; --ink-400: #6b6e75;
+        --line: #e0e2e8; --line-strong: #b4b8c2;
+        --accent: #0a72ef; --accent-text: #0a63d0; --accent-soft: rgba(10,114,239,0.10); --accent-hair: rgba(10,114,239,0.40);
+        --shadow-rest: rgba(23,23,23,0.06) 0 0 0 1px, rgba(23,23,23,0.04) 0 1px 2px, #ffffff 0 0 0 1px inset;
+        --shadow-elev: rgba(23,23,23,0.10) 0 0 0 1px, rgba(23,23,23,0.10) 0 4px 12px, rgba(23,23,23,0.06) 0 12px 28px;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px; height: 1080px; background: var(--canvas); overflow: hidden;
+        font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink); -webkit-font-smoothing: antialiased;
+      }
+      [data-composition-id] { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+      #bg-grid { position: absolute; inset: 0; z-index: 0; }
+      .scanline { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; pointer-events: none;
+        background: linear-gradient(90deg, transparent, var(--accent-hair), transparent); opacity: 0; }
+
+      #stage { position: absolute; inset: 0; z-index: 5; }
+
+      /* embedded single-line caption (bottom) — one line at a time */
+      .cap { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%);
+        max-width: 1500px; width: max-content; z-index: 30;
+        padding: 12px 28px; background: rgba(255,255,255,0.95);
+        border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 2px;
+        box-shadow: var(--shadow-rest);
+        font-size: 28px; font-weight: 600; line-height: 1; color: var(--ink);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+        display: block; opacity: 0; visibility: hidden;
+      }
+
+    </style>
+  </head>
+  <body>
+    <div
+      id="master"
+      data-composition-id="master"
+      data-width="1920"
+      data-height="1080"
+      data-start="0"
+      data-duration="{{DURATION}}"
+    >
+      <svg id="bg-grid" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 1920 1080">
+        <defs>
+          <pattern id="grid-pat" width="64" height="64" patternUnits="userSpaceOnUse">
+            <path d="M64 0 H0 V64" fill="none" stroke="rgba(23,23,23,0.04)" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect width="1920" height="1080" fill="url(#grid-pat)"/>
+      </svg>
+      <div class="scanline" id="scanline"></div>
+
+      <div id="stage" data-layout-allow-overlap><!-- slides injected by build_composition.py --></div>
+
+      <div id="captions"></div>
+      <div id="audio-clips"></div>
+    </div>
+
+    <script>window.LC_DATA = {}; /* replaced by build_composition.py */</script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      var DATA = window.LC_DATA || {};
+      var ACC = "#0a72ef";
+      var LOCKUP = '<div class="lockup"><img src="'+esc(DATA.logo||"logos/lc.svg")+'" alt=""><span>LongCipher</span></div>';
+      function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+      function mono(s){ return '<span style="font-family:\'JetBrains Mono\',monospace">'+esc(s)+"</span>"; }
+
+      /* ── Build slides ── */
+      var slides = DATA.slides || [];
+      var html = "";
+
+      // Slide 0 = cover (hero), always present.
+      var c = DATA.cover || {};
+      var headlines = (c.headlines||[]).map(function(h){
+        return '<li><span class="hl-idx">›</span><span class="hl-txt">'+esc(h)+'</span></li>';
+      }).join("");
+      html += ''
+        + '<section class="slide" id="slide-0" data-s="0">'
+        +   LOCKUP
+        +   '<div class="corner-tag">'+esc(c.cornerTag||c.kicker||"BRIEF")+'</div>'
+        +   '<div class="center">'
+        +     '<div class="kicker">'+esc(c.kicker||"")+'</div>'
+        +     '<div class="title">'+esc(c.title||"").replace(/\\n/g,"<br>")+'</div>'
+        +     '<div class="sub">'+esc(c.subtitle||"").replace(/\\n/g,"<br>")+'</div>'
+        +     (headlines ? '<div class="headlines"><div class="hl-head">'+esc(c.headlinesLabel||meta.headlinesLabel||"TODAY’S FOCUS")+'</div><ul>'+headlines+'</ul></div>' : '')
+        +   '</div>'
+        +   '<div class="meta-row"><span class="left">'+esc(c.metaLeft||"")+'</span><span class="center-bar"></span><span class="right">'+esc(c.metaRight||"")+'</span></div>'
+        + '</section>';
+
+      // Slides 1..n from data.
+      slides.forEach(function(s, i){
+        var n = i + 1;
+        var sStart = s._start != null ? s._start : 0;
+        var sEnd   = s._end   != null ? s._end   : sStart + 8;
+        var sAttrs = ' data-start="'+sStart+'" data-end="'+sEnd+'"';
+        if (s.type === "keypoint") {
+          var bullets = (s.bullets||[]).map(function(b){
+            return '<li><span class="b-dot"></span><span class="b-txt">'+esc(b)+'</span></li>';
+          }).join("");
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   '<div class="accent-rule"></div>'
+            +   '<div class="stage">'
+            +     '<div class="eyebrow">'+esc(s.eyebrow||"核心观点")+'</div>'
+            +     '<div class="statement">'+esc(s.statement||"")+'</div>'
+            +     (s.support ? '<div class="support">'+esc(s.support)+'</div>' : '')
+            +     (bullets ? '<ul class="bullets">'+bullets+'</ul>' : '')
+            +   '</div>'
+            +   '<div class="idx-tag">'+String(n).padStart(2,"0")+' / '+String(slides.length).padStart(2,"0")+'</div>'
+            + '</section>';
+        } else if (s.type === "three_points") {
+          var pts = (s.points||[]).map(function(p){
+            return '<div class="point">'
+              + '<div class="no">'+esc(p.no||"")+'</div>'
+              + '<div class="pt-title">'+esc(p.title||"")+'</div>'
+              + '<div class="bar"></div>'
+              + '<div class="pt-body">'+esc(p.body||"")+'</div>'
+              + '</div>';
+          }).join("");
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">SUMMARY</span><h2>'+esc(s.title||"三点总结")+'</h2></div>'
+            +     '<div class="grid">'+pts+'</div>'
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "outro") {
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   '<div class="card">'
+            +     '<div class="kicker">WRAP-UP</div>'
+            +     '<div class="recap">'+esc(s.recap||"")+'</div>'
+            +     '<div class="divider"></div>'
+            +     '<div class="signoff">'+esc(s.signoff||"LongCipher")+'</div>'
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "table") {
+          var numCols = (s.numCols||[]);
+          var headCells = (s.head||[]).map(function(h){ return '<th>'+esc(h)+'</th>'; }).join("");
+          var bodyRows = (s.rows||[]).map(function(r){
+            var cells = (r||[]).map(function(c, ci){
+              return '<td'+(numCols.indexOf(ci)>=0?' class="num"':'')+'>'+esc(c)+'</td>';
+            }).join("");
+            return '<tr>'+cells+'</tr>';
+          }).join("");
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">DATA</span><h2>'+esc(s.title||"数据一览")+'</h2></div>'
+            +     '<div class="tbl-card">'
+            +       '<table class="tbl"><thead><tr>'+headCells+'</tr></thead><tbody>'+bodyRows+'</tbody></table>'
+            +     '</div>'
+            +   '</div>'
+            + '</section>';
+        }
+      });
+      document.getElementById("stage").innerHTML = html;
+
+      /* ── Captions (one line per cue, refreshed in step with audio) ── */
+      var caps = "";
+      var cueIdx = 0;
+      (DATA.turns||[]).forEach(function(t){
+        var cues = t.cues && t.cues.length ? t.cues : [{ text: t.text, start: t.start, end: t.end }];
+        cues.forEach(function(c){
+          caps += '<div class="cap clip" data-cap="'+cueIdx+'" data-start="'+c.start+'" data-duration="'+((c.end-c.start)).toFixed(3)+'" data-track-index="100">'+esc(c.text)+'</div>';
+          cueIdx++;
+        });
+      });
+      document.getElementById("captions").innerHTML = caps;
+
+      /* ── Audio ── */
+      var aud = "";
+      (DATA.turns||[]).forEach(function(t,i){
+        aud += '<audio class="clip" src="'+t.file+'" data-start="'+t.start+'" data-duration="'+t.duration+'" data-track-index="'+(200+i)+'" data-volume="1"></audio>';
+      });
+      document.getElementById("audio-clips").innerHTML = aud;
+
+      /* ── GSAP timeline ── */
+      var tl = gsap.timeline({ paused: true });
+      tl.set(".cap", { autoAlpha: 0 }, 0);
+
+      // hero / cover
+      tl.fromTo("#slide-0 .corner-tag", { x:16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5 }, 0.1);
+      tl.fromTo("#slide-0 .kicker", { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power3.out" }, 0.2);
+      tl.fromTo("#slide-0 .title", { y:26, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.8, ease:"power3.out" }, 0.35);
+      tl.fromTo("#slide-0 .sub", { y:18, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power2.out" }, 0.65);
+      tl.fromTo("#slide-0 .headlines", { autoAlpha:0 }, { autoAlpha:1, duration:0.5 }, 0.9);
+      tl.fromTo("#slide-0 .headlines li", { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, stagger:0.1, ease:"power2.out" }, 1.0);
+      tl.fromTo("#slide-0 .meta-row", { y:14, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.5 }, 0.85);
+
+      // per-slide enter/exit
+      var slideEls = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+      slideEls.forEach(function(el, i){
+        // Tag every slide as a HyperFrames clip with its own time window so the
+        // checker knows only one is visible at a time (they overlap in layout).
+        el.classList.add("clip");
+        if (i === 0) {
+          // Cover/hero stays on screen through the intro narration (until the
+          // first slide begins) so there is no blank gap after the hero hook.
+          var coverEnd = (DATA.coverEnd != null && DATA.coverEnd > 0) ? DATA.coverEnd : 4.0;
+          el.setAttribute("data-start", 0);
+          el.setAttribute("data-duration", coverEnd);
+          el.setAttribute("data-track-index", 10);
+          el.classList.add("on");
+          return; // cover animations handled above; no autoAlpha toggle needed
+        }
+        var start = parseFloat(el.getAttribute("data-start") || "0");
+        var end = parseFloat(el.getAttribute("data-end") || (start+8));
+        el.classList.add("clip");
+        el.setAttribute("data-start", start);
+        el.setAttribute("data-duration", (end-start));
+        el.setAttribute("data-track-index", 10+i);
+        tl.add(function(){ el.classList.add("on"); }, start-0.02);
+        tl.set(el, { autoAlpha:0 }, start-0.01);
+        tl.to(el, { autoAlpha:1, duration:0.5, ease:"power3.out" }, start);
+
+        if (el.querySelector(".accent-rule")) {
+          tl.fromTo(el.querySelector(".accent-rule"), { scaleY:0, transformOrigin:"top" }, { scaleY:1, duration:0.6, ease:"power3.out" }, start+0.1);
+        }
+        tl.fromTo(el.querySelectorAll(".eyebrow, .head, .kicker"), { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power3.out" }, start+0.2);
+        tl.fromTo(el.querySelectorAll(".statement, .recap, .card"), { y:26, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.7, ease:"power3.out" }, start+0.35);
+        if (el.querySelectorAll(".bullets li").length) {
+          tl.fromTo(el.querySelectorAll(".bullets li"), { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power2.out", stagger:0.1 }, start+0.55);
+        }
+        tl.fromTo(el.querySelectorAll(".point"), { y:28, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out", stagger:0.12 }, start+0.4);
+        tl.fromTo(el.querySelectorAll(".support, .signoff, .divider"), { autoAlpha:0 }, { autoAlpha:1, duration:0.5 }, start+0.7);
+        if (el.querySelector(".tbl-card")) {
+          tl.fromTo(el.querySelector(".tbl-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          tl.fromTo(el.querySelectorAll(".tbl thead tr"), { autoAlpha:0 }, { autoAlpha:1, duration:0.4 }, start+0.45);
+          tl.fromTo(el.querySelectorAll(".tbl tbody tr"), { x:-14, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.45, ease:"power2.out", stagger:0.09 }, start+0.55);
+        }
+        tl.to(el, { autoAlpha:0, duration:0.4, ease:"power2.inOut" }, end-0.35);
+        tl.add(function(){ el.classList.remove("on"); }, end);
+      });
+
+      // captions — one line per cue, each visible only during its own audio slice
+      document.querySelectorAll(".cap").forEach(function(cap){
+        var cs = parseFloat(cap.getAttribute("data-start") || "0");
+        var cd = parseFloat(cap.getAttribute("data-duration") || "1");
+        var ce = cs + cd;
+        tl.set(cap, { autoAlpha:0 }, cs - 0.01);
+        tl.to(cap, { autoAlpha:1, duration:0.18, ease:"power3.out" }, cs + 0.04);
+        tl.to(cap, { autoAlpha:0, duration:0.16 }, ce - 0.10);
+      });
+
+      tl.to("#master", { autoAlpha:0, duration:0.5, ease:"power2.inOut" }, parseFloat("{{DURATION}}")-0.5);
+      window.__timelines["master"] = tl;
+    </script>
+    <style>
+      /* slide layout (light) — fixed component styling, no LLM CSS */
+      .slide { position:absolute; inset:0; opacity:0; visibility:hidden; }
+      .slide.on { opacity:1; visibility:visible; }
+      /* cover */
+      .slide .lockup { position:absolute; top:5.5%; left:6%; display:flex; align-items:center; gap:12px; z-index:6; }
+      .slide .lockup img { width:34px; height:34px; }
+      .slide .lockup span { font-family:"JetBrains Mono",monospace; font-size:18px; font-weight:700; color:var(--ink-300); letter-spacing:.14em; }
+      .slide .corner-tag { position:absolute; top:5.5%; right:6%; font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); border:1px solid var(--accent-hair); padding:6px 10px; z-index:6; }
+      .slide .center { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:86%; z-index:5; }
+      .slide .kicker { font-family:"JetBrains Mono",monospace; font-size:18px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:20px; display:flex; align-items:center; gap:14px; }
+      .slide .kicker::before { content:""; width:32px; height:2px; background:var(--accent); }
+      .slide .title { font-size:62px; font-weight:800; line-height:1.08; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
+      .slide .sub { margin-top:20px; font-size:24px; font-weight:400; color:var(--ink-200); line-height:1.4; max-width:1300px; }
+      .slide .headlines { margin:30px auto 0; width:100%; display:flex; flex-direction:column; gap:14px; border-top:1px solid var(--line); padding-top:24px; }
+      .slide .headlines .hl-head { font-family:"JetBrains Mono",monospace; font-size:14px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-400); margin-bottom:6px; }
+      .slide .headlines ul { list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:12px 28px; }
+      .slide .headlines li { display:flex; align-items:baseline; gap:12px; font-size:19px; line-height:1.36; color:var(--ink-200); }
+      .slide .headlines .hl-idx { flex:0 0 auto; color:var(--accent-text); font-family:"JetBrains Mono",monospace; font-weight:700; }
+      .slide .meta-row { position:absolute; bottom:5.5%; left:6%; right:6%; display:flex; justify-content:space-between; align-items:baseline; z-index:6; }
+      .slide .meta-row .left, .slide .meta-row .right { font-family:"JetBrains Mono",monospace; font-size:15px; color:var(--ink-300); letter-spacing:.1em; text-transform:uppercase; }
+      .slide .meta-row .center-bar { flex:1; height:1px; margin:0 18px; background:var(--line); }
+      /* keypoint */
+      .slide .accent-rule { position:absolute; left:8%; top:22%; width:3px; height:56%; background:var(--accent); z-index:1; }
+      .slide .stage { position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; justify-content:center; padding:0 14%; }
+      .slide .eyebrow { font-family:"JetBrains Mono",monospace; font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:28px; display:flex; align-items:center; gap:14px; }
+      .slide .eyebrow::before { content:""; width:28px; height:2px; background:var(--accent); }
+      .slide .statement { font-size:60px; font-weight:700; line-height:1.22; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
+      .slide .support { margin-top:30px; font-size:26px; font-weight:400; color:var(--ink-300); line-height:1.45; max-width:1200px; font-family:"JetBrains Mono",monospace; letter-spacing:.02em; }
+      .slide .bullets { list-style:none; margin-top:34px; display:grid; gap:16px; max-width:1240px; }
+      .slide .bullets li { display:flex; align-items:baseline; gap:16px; font-size:25px; line-height:1.42; color:var(--ink-200); }
+      .slide .bullets .b-dot { flex:0 0 auto; width:9px; height:9px; margin-top:11px; background:var(--accent); border-radius:2px; }
+      .slide .bullets .b-txt { flex:1; }
+      .slide .idx-tag { position:absolute; right:8%; bottom:10%; z-index:3; font-family:"JetBrains Mono",monospace; font-size:18px; color:var(--ink-400); letter-spacing:.12em; }
+      .slide .lockup { opacity:0.7; }
+      /* three_points */
+      .slide .wrap { position:absolute; inset:0; z-index:3; padding:11% 7% 8%; display:flex; flex-direction:column; }
+      .slide .head { display:flex; align-items:baseline; gap:16px; margin-bottom:34px; }
+      .slide .head .tag { font-family:"JetBrains Mono",monospace; font-size:18px; color:var(--accent-text); letter-spacing:.14em; text-transform:uppercase; border:1px solid var(--accent-hair); padding:4px 10px; }
+      .slide .head h2 { font-size:40px; font-weight:700; letter-spacing:-0.01em; color:var(--ink); }
+      .slide .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; flex:1; min-height:0; }
+      .slide .point { background:var(--surface); box-shadow:var(--shadow-rest); border-radius:2px; padding:34px 32px; display:flex; flex-direction:column; gap:16px; }
+      .slide .point .no { font-family:"JetBrains Mono",monospace; font-size:46px; font-weight:700; color:var(--accent-text); line-height:1; letter-spacing:-.02em; }
+      .slide .point .pt-title { font-size:30px; font-weight:700; color:var(--ink); letter-spacing:-0.01em; }
+      .slide .point .bar { width:40px; height:2px; background:var(--line-strong); }
+      .slide .point .pt-body { font-size:21px; font-weight:400; color:var(--ink-200); line-height:1.5; }
+      /* outro */
+      .slide .card { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:70%; background:var(--surface); box-shadow:var(--shadow-elev); border-radius:2px; padding:54px 56px; z-index:3; text-align:center; }
+      .slide .card .kicker { font-family:"JetBrains Mono",monospace; font-size:18px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:26px; display:inline-flex; align-items:center; gap:14px; justify-content:center; }
+      .slide .card .kicker::before, .slide .card .kicker::after { content:""; width:26px; height:2px; background:var(--accent); }
+      .slide .card .recap { font-size:38px; font-weight:700; line-height:1.34; letter-spacing:-0.01em; color:var(--ink); max-width:1300px; margin:0 auto; }
+      .slide .card .divider { width:64px; height:2px; background:var(--accent); margin:34px auto; }
+      .slide .card .signoff { font-family:"JetBrains Mono",monospace; font-size:20px; color:var(--ink-300); letter-spacing:.14em; text-transform:uppercase; }
+      .slide .lockup.bottom { top:auto; bottom:6%; left:50%; transform:translateX(-50%); }
+      /* table */
+      .slide .tbl-card { flex:1; min-height:0; background:var(--surface); box-shadow:var(--shadow-rest); border-radius:2px; overflow:hidden; display:flex; flex-direction:column; }
+      .slide .tbl { width:100%; border-collapse:collapse; table-layout:fixed; font-size:24px; }
+      .slide .tbl thead th { font-family:"JetBrains Mono",monospace; font-size:18px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#ffffff; background:var(--accent); text-align:left; padding:18px 24px; }
+      .slide .tbl tbody td { padding:18px 24px; color:var(--ink); border-bottom:1px solid var(--line); vertical-align:middle; line-height:1.35; }
+      .slide .tbl tbody td:first-child { font-weight:600; color:var(--ink); }
+      .slide .tbl tbody td.num { font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--accent-text); text-align:right; letter-spacing:.01em; }
+      .slide .tbl tbody tr:nth-child(even) { background:rgba(23,23,23,0.018); }
+      .slide .tbl tbody tr:last-child td { border-bottom:none; }
+    </style>
+  </body>
+</html>

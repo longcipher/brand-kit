@@ -1,123 +1,34 @@
 #!/usr/bin/env python3
-"""build_composition.py — generate the HyperFrames video composition from
-script.json + timestamps.json.
+"""build_composition.py — assemble the LIGHT HyperFrames composition from
+script.json + speaker_timestamps.json.
+
+Strategy (fixed-template, JSON-only authoring):
+  - The LLM writes structured JSON only (cover + slides[] + podcast[]).
+  - This script injects that data into the hand-built light templates
+    (assets/templates/dashboard.html). NO CSS is authored by the LLM.
+  - Slides are laid out as full-frame components, evenly distributed across the
+    narration timeline, each a HyperFrames clip aligned to speaker turns.
 
 Usage:
   uv run python scripts/build_composition.py --script dist/script.json \
-      --timings dist/timestamps.json --out dist/video
-
-Produces:
-  dist/video/index.html         master composition (scenes + captions + audio)
-  dist/video/hyperframes.json   project config
-
-Scene data-duration is set EXACTLY to the scene audio duration from
-timestamps.json, and the GSAP timeline is absolute and aligned to it.
+      --timings dist/speaker_timestamps.json --out dist/video
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
+import subtitle_util as sub
+
 HYPERFRAMES_JSON = '{\n  "$schema": "https://hyperframes.heygen.com/schema/hyperframes.json",\n  "paths": { "assets": "assets" }\n}\n'
 
-STYLE = """
-      :root {
-        --bg-100: #ffffff;
-        --bg-200: #fafafa;
-        --ink-100: #171717;
-        --ink-900: #4d4d4d;
-        --ink-700: #8f8f8f;
-        --hairline: #ebebeb;
-        --accent: #0070f3;
-      }
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body, html {
-        width: 1920px; height: 1080px;
-        background: var(--bg-100);
-        overflow: hidden;
-        font-family: "Inter", "Geist Sans", system-ui, -apple-system, sans-serif;
-        color: var(--ink-100);
-      }
-      #master-root { position: relative; width: 1920px; height: 1080px; }
-
-      /* ── Scene layout ── */
-      .scene {
-        position: absolute; inset: 0;
-        display: flex; flex-direction: column;
-        justify-content: center;
-        padding: 64px 160px;
-        background: var(--bg-100);
-        visibility: hidden;
-      }
-      .scene-bg-mesh {
-        position: absolute; inset: 0;
-        background:
-          radial-gradient(900px 500px at 22% 30%, rgba(0,124,240,0.20), transparent 65%),
-          radial-gradient(1100px 700px at 80% 35%, rgba(0,223,216,0.16), transparent 60%),
-          radial-gradient(700px 500px at 50% 85%, rgba(121,40,202,0.12), transparent 65%);
-        opacity: 0.6;
-        pointer-events: none;
-      }
-      .scene-eyebrow {
-        font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 24px; letter-spacing: 0.08em; text-transform: uppercase;
-        color: var(--ink-700);
-        margin-bottom: 24px;
-      }
-      .scene-title {
-        font-size: 72px; font-weight: 600; line-height: 1.1;
-        letter-spacing: -0.02em; text-wrap: balance;
-        max-width: 1500px;
-        margin-bottom: 40px;
-      }
-      .scene-bullets { list-style: none; max-width: 1400px; }
-      .scene-bullet {
-        display: flex; align-items: baseline; gap: 16px;
-        font-size: 36px; font-weight: 400; line-height: 1.4;
-        color: var(--ink-900);
-        margin-bottom: 16px;
-      }
-      .bullet-dot {
-        flex: 0 0 12px; height: 12px; align-self: center;
-        border-radius: 9999px;
-        background: var(--accent);
-      }
-      .scene-code {
-        margin-top: 32px;
-        padding: 28px 32px;
-        background: var(--bg-200);
-        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
-        border-radius: 6px;
-        font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-        font-size: 30px; line-height: 1.5;
-        color: var(--ink-100);
-        max-width: 1500px;
-        overflow: hidden;
-        white-space: pre-wrap;
-      }
-
-      /* ── Caption ── */
-      .cap {
-        position: absolute;
-        bottom: 88px; left: 50%;
-        transform: translateX(-50%);
-        max-width: 1600px;
-        padding: 14px 32px;
-        border-radius: 14px;
-        background: rgba(23,23,23,0.55);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        color: #ffffff;
-        font-size: 44px; font-weight: 600; line-height: 1.2;
-        letter-spacing: -0.01em;
-        text-align: center;
-        visibility: hidden;
-        z-index: 50;
-      }
-"""
+TEMPLATE = "assets/templates/dashboard.html"
+HERO_DURATION = 4.0  # cover/hero hook before first content slide
+SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 
 def die(msg: str) -> None:
@@ -125,162 +36,207 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
-def esc(s) -> str:
-    return (
-        str(s if s is not None else "")
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+def _pick(script: dict, key: str, lang: str):
+    if lang == "en":
+        val = script.get(key + "En")
+        if val is None:
+            sys.stderr.write(f"! {key}En missing — falling back to {key}[] for EN video\n")
+            val = script.get(key)
+        return val
+    return script.get(key)
 
 
-def esc_attr(s) -> str:
-    return esc(s).replace('"', "&quot;")
+def _split_turn_cues(turn: dict, lang: str) -> list[dict]:
+    """Split a spoken turn into per-cue caption windows that exactly mirror the
+    .srt sidecar. Each cue owns its own [start, end] slice of the turn's audio,
+    so the on-screen caption refreshes line-by-line in step with the voice
+    (instead of one long caption that gets truncated by `text-overflow`)."""
+    text = (turn.get("text") or "").strip()
+    if not text:
+        return []
+    start = float(turn.get("start", 0))
+    end = float(turn.get("end", 0))
+    span = max(end - start, 0.001)
+    cues_text = sub.split_subtitles(text, lang)
+    if not cues_text:
+        return []
+    weights = [len(c) for c in cues_text]
+    total_w = sum(weights) or 1
+    out: list[dict] = []
+    cursor = start
+    for c, w in zip(cues_text, weights):
+        dur = span * (w / total_w)
+        seg_end = cursor + dur
+        out.append({
+            "text": c,
+            "start": round(cursor, 3),
+            "end": round(seg_end, 3),
+        })
+        cursor = seg_end
+    return out
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Build the HyperFrames video composition")
+    p = argparse.ArgumentParser(description="Build the light composition")
     p.add_argument("--script", default="dist/script.json")
-    p.add_argument("--timings", default="dist/timestamps.json")
+    p.add_argument("--timings", default="dist/speaker_timestamps.json")
+    p.add_argument("--lang", default="zh", choices=["zh", "en"])
     p.add_argument("--out", default="dist/video")
     args = p.parse_args()
 
+    lang = args.lang
     script_path = Path(args.script)
-    timings_path = Path(args.timings)
-    out_dir = Path(args.out)
+    default_timings = (
+        f"dist/speaker_timestamps_{lang}.json" if lang == "en" else "dist/speaker_timestamps.json"
+    )
+    timings_path = Path(
+        args.timings if args.timings != "dist/speaker_timestamps.json" else default_timings
+    )
+    out_dir = Path(args.out if args.out != "dist/video" else f"dist/video_{lang}")
 
     if not script_path.exists():
         die(f"missing script: {script_path}")
     if not timings_path.exists():
-        die(f"missing timings: {timings_path} (run generate-audio first)")
+        die(f"missing timings: {timings_path} (run generate-audio --lang {lang} first)")
 
     script = json.loads(script_path.read_text(encoding="utf-8"))
-    timings = json.loads(timings_path.read_text(encoding="utf-8"))
-    scenes = script.get("scenes")
-    t_scenes = timings.get("scenes")
+    timestamps = json.loads(timings_path.read_text(encoding="utf-8"))
+    turns = timestamps.get("turns")
+    if not isinstance(turns, list) or not turns:
+        die("speaker_timestamps.json has no turns")
 
-    if not isinstance(scenes, list) or len(scenes) == 0:
-        die("script.json has no scenes")
-    if len(scenes) != len(t_scenes):
-        die(f"scene count mismatch: script={len(scenes)} timings={len(t_scenes)}")
-    if timings.get("total", 0) <= 0:
+    total = float(timestamps.get("total", 0))
+    if total <= 0:
         die("timings.total must be > 0")
 
-    TOTAL = round(timings["total"] + 0.5, 3)  # 0.5s tail
+    meta = script.get("meta", {})
+    cover = _pick(script, "cover", lang) or {}
+    slides = _pick(script, "slides", lang) or []
 
-    scene_els: list[str] = []
-    cap_els: list[str] = []
-    audio_els: list[str] = []
-    timeline_blocks: list[str] = []
+    # Auto-append an outro if the last slide isn't one.
+    if not slides or slides[-1].get("type") != "outro":
+        slides = list(slides) + [{"type": "outro", "recap": cover.get("subtitle") or meta.get("subtitle") or "",
+                                  "signoff": "LongCipher", "audioFrom": turns[-1].get("id") if turns else None,
+                                  "audioTo": turns[-1].get("id") if turns else None}]
 
-    for i, scene in enumerate(scenes):
-        t = t_scenes[i]
-        idx = f"{i + 1:02d}"
-        start = t["start"]
-        dur = t["duration"]
-        track = i + 1
-        sel = f'[data-scene="{idx}"]'
-        cap_sel = f'[data-caption="{idx}"]'
+    # Map each slide to the audio window it illustrates. A slide may declare
+    # `audioFrom`/`audioTo` turn ids so the on-screen text stays in lock-step
+    # with the spoken narration (the user reads the center zone, not the
+    # caption). Without those hints we fall back to even distribution.
+    id_to_turn = {t.get("id"): t for t in turns}
+    n = len(slides)
 
-        bullets = "\n".join(
-            f'          <li class="scene-bullet"><span class="bullet-dot"></span>{esc(b)}</li>'
-            for b in (scene.get("points") or [])
-        )
-        code_block = (
-            f'          <pre class="scene-code"><code>{esc(scene["code"])}</code></pre>'
-            if scene.get("code")
-            else ""
-        )
+    def _turn_time(tid, which):
+        t = id_to_turn.get(tid)
+        if not t:
+            return None
+        return float(t.get(which, 0))
 
-        scene_els.append(f"""      <div class="scene clip" data-scene="{idx}" data-start="{start}" data-duration="{dur}" data-track-index="{track}">
-        <div class="scene-bg-mesh"></div>
-        <div class="scene-eyebrow">{esc_attr(scene.get("id", ""))} · {esc_attr(scene.get("keyword", ""))}</div>
-        <h1 class="scene-title">{esc(scene.get("title", ""))}</h1>
-        <ul class="scene-bullets">
-{bullets}
-        </ul>
-{code_block}
-      </div>""")
+    # First pass: resolve explicit audioFrom/audioTo windows.
+    windows = []
+    for s in slides:
+        a0, a1 = s.get("audioFrom"), s.get("audioTo")
+        t0 = _turn_time(a0, "start") if a0 else None
+        t1 = _turn_time(a1, "end") if a1 else None
+        if t0 is None or t1 is None:
+            windows.append(None)
+        else:
+            windows.append((round(t0, 3), round(t1, 3)))
 
-        cap_els.append(
-            f'      <div class="cap clip" data-caption="{idx}" data-start="{start}" data-duration="{dur}" data-track-index="{track + 20}">{esc(scene.get("narration", ""))}</div>'
-        )
+    # Second pass: fill gaps so every slide has a contiguous, non-overlapping
+    # window across [HERO_DURATION, total]. Slides with explicit windows keep
+    # them; the rest split the remaining audio proportionally.
+    if any(w is None for w in windows):
+        # Build explicit boundaries where known, then distribute the rest.
+        seg = (total - HERO_DURATION) / n
+        for i, w in enumerate(windows):
+            if w is None:
+                s_start = round(HERO_DURATION + i * seg, 3)
+                s_end = round(HERO_DURATION + (i + 1) * seg, 3)
+                windows[i] = (s_start, s_end)
+    # Ensure monotonic, gap-free coverage. Each slide starts at its resolved
+    # audio-binding window, and its end is pushed to the NEXT slide's start so
+    # unbound "bridge" turns are visually absorbed by the previous slide (no
+    # blank gaps in the video). The last slide runs to the end of the audio.
+    windows.sort(key=lambda x: x[0])
+    for i in range(n):
+        s_start, s_end = windows[i]
+        s_start = round(max(s_start, HERO_DURATION if i == 0 else windows[i - 1][1]), 3)
+        if i < n - 1:
+            s_end = max(s_end, windows[i + 1][0])
+        else:
+            s_end = max(s_end, total)
+        # never let a slide be shorter than a minimum so content is readable
+        s_end = max(s_end, s_start + 1.0)
+        windows[i] = (s_start, round(s_end, 3))
 
-        audio_els.append(
-            f'      <audio class="clip" src="audio/scene-{idx}.wav" data-start="{start}" data-duration="{dur}" data-track-index="{track + 40}" data-volume="1"></audio>'
-        )
+    for i, s in enumerate(slides):
+        s["_start"] = windows[i][0]
+        s["_end"] = windows[i][1]
 
-        s = start
-        timeline_blocks.append(f"""    // ── scene {idx} ({t.get("id", "")}) @ {s}s – {(s + dur):.1f}s ──
-    {{
-      const sc = document.querySelector('{sel}');
-      tl.set(sc, {{ autoAlpha: 1 }});
-      tl.fromTo(sc.querySelector(".scene-eyebrow"),
-        {{ y: -12, autoAlpha: 0 }}, {{ y: 0, autoAlpha: 1, duration: 0.4, ease: "power2.out" }}, {s} + 0.1);
-      tl.fromTo(sc.querySelector(".scene-title"),
-        {{ y: 24, autoAlpha: 0 }}, {{ y: 0, autoAlpha: 1, duration: 0.5, ease: "power3.out" }}, {s} + 0.25);
-      tl.fromTo(sc.querySelectorAll(".scene-bullet"),
-        {{ y: 20, autoAlpha: 0 }}, {{ y: 0, autoAlpha: 1, duration: 0.4, ease: "power3.out", stagger: 0.12 }}, {s} + 0.5);
-      const code = sc.querySelector(".scene-code");
-      if (code) tl.fromTo(code,
-        {{ y: 16, autoAlpha: 0 }}, {{ y: 0, autoAlpha: 1, duration: 0.5, ease: "power2.out" }}, {s} + 0.9);
-      const cap = document.querySelector('{cap_sel}');
-      tl.fromTo(cap,
-        {{ y: 8, autoAlpha: 0 }}, {{ y: 0, autoAlpha: 1, duration: 0.3, ease: "power3.out" }}, {s} + 0.15);
-    }}""")
+    # Cover/hero stays on screen through the intro narration (until the first
+    # slide begins) so there is never a blank gap between the hero hook and the
+    # first content slide. Fall back to HERO_DURATION if no slide exists.
+    cover_end = round(windows[0][0], 3) if windows else HERO_DURATION
 
-    lang = esc_attr(script.get("meta", {}).get("lang", "zh"))
-    title = esc_attr(script.get("meta", {}).get("title", "LongCipher Explain"))
+    data = {
+        "lang": lang,
+        "logo": "logos/lc.svg",
+        "coverEnd": cover_end,
+        "cover": {
+            "kicker": cover.get("kicker") or meta.get("kicker", "BRIEF"),
+            "title": cover.get("title") or meta.get("title", ""),
+            "subtitle": cover.get("subtitle") or meta.get("subtitle", ""),
+            "cornerTag": cover.get("cornerTag") or cover.get("kicker") or meta.get("kicker", "BRIEF"),
+            "metaLeft": cover.get("metaLeft") or f"{meta.get('brand','LongCipher')} · {meta.get('kicker','BRIEF')}",
+            "metaRight": cover.get("metaRight") or meta.get("date") or "",
+            "headlinesLabel": cover.get("headlinesLabel") or meta.get("headlinesLabel") or ("今日重点" if lang == "zh" else "TODAY'S FOCUS"),
+            "headlines": cover.get("headlines") or [],
+        },
+        "slides": slides,
+        "turns": [
+            {
+                "id": t.get("id"),
+                "speaker": t.get("speaker"),
+                "text": t.get("text", ""),
+                "start": round(float(t.get("start", 0)), 3),
+                "end": round(float(t.get("end", 0)), 3),
+                "duration": round(float(t.get("duration", 0)), 3),
+                "file": t.get("file", ""),
+                "cues": _split_turn_cues(t, lang),
+            }
+            for t in turns
+        ],
+    }
 
-    html = f"""<!doctype html>
-<html lang="{lang}">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{title}</title>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
-    <style>{STYLE}    </style>
-  </head>
-  <body>
-    <div
-      id="master-root"
-      data-composition-id="master"
-      data-width="1920"
-      data-height="1080"
-      data-start="0"
-      data-duration="{TOTAL}"
-    >
-{chr(10).join(scene_els)}
-    </div>
+    template_path = SKILL_ROOT / TEMPLATE
+    if not template_path.exists():
+        die(f"missing template: {template_path}")
+    html = template_path.read_text(encoding="utf-8")
 
-    <!-- captions: body-level siblings -->
-{chr(10).join(cap_els)}
-
-    <!-- audio: body-level siblings -->
-{chr(10).join(audio_els)}
-
-    <script>
-      window.__timelines = window.__timelines || {{}};
-      var tl = gsap.timeline({{ paused: true }});
-
-{chr(10).join(timeline_blocks)}
-
-      // final fade-out tail
-      tl.to("#master-root", {{ autoAlpha: 0, duration: 0.5, ease: "power2.inOut" }}, {TOTAL} - 0.5);
-
-      window.__timelines["master"] = tl;
-    </script>
-  </body>
-</html>
-"""
+    data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    html = html.replace("window.LC_DATA = {};", f"window.LC_DATA = {data_json};")
+    html = html.replace("{{DURATION}}", f"{round(total + 0.5, 3)}")
+    html = html.replace("{{LANG}}", lang)
+    html = html.replace("{{TITLE}}", (cover.get("title") or meta.get("title") or "").replace("\n", " "))
+    html = html.replace("{{LOGO}}", "logos/lc.svg")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(html, encoding="utf-8")
     (out_dir / "hyperframes.json").write_text(HYPERFRAMES_JSON, encoding="utf-8")
 
+    logo_src = SKILL_ROOT / "assets" / "logos" / "lc.svg"
+    if logo_src.exists():
+        dst = out_dir / "logos"
+        dst.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(logo_src, dst / "lc.svg")
+    else:
+        sys.stderr.write(f"! brand logo missing: {logo_src}\n")
+
     sys.stdout.write(
-        f"✓ composition written: {out_dir / 'index.html'} ({len(scenes)} scenes, {TOTAL}s)\n"
-        f"  Next: cd dist/video && npx --yes hyperframes lint && npx --yes hyperframes check\n"
+        f"✓ composition written (lang={lang}): {out_dir / 'index.html'} "
+        f"({len(turns)} turns, {len(slides)} slides, {round(total + 0.5, 3)}s)\n"
+        f"  Next: cd {out_dir} && npx --yes hyperframes lint && npx --yes hyperframes check\n"
     )
     sys.exit(0)
 

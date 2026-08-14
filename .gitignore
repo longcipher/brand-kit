@@ -2,3 +2,4 @@
 .codebuddy/
 .pytest_cache/
 .ruff_cache/
+article_input/
