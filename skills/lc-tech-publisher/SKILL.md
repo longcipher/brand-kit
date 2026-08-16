@@ -87,19 +87,23 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
   },
 
   "podcast": [                              // THE SPINE: two-speaker dialogue
-    { "id": "01", "speaker": "male",   "text": "今天我们来聊…" },
-    { "id": "02", "speaker": "female", "text": "那这个到底是什么意思？" },
-    { "id": "03", "speaker": "male",   "text": "简单来说…" }
+    { "id": "01", "speaker": "male",   "emotion": "calm",     "text": "今天我们来聊…" },
+    { "id": "02", "speaker": "female", "emotion": "curious",  "text": "那这个到底是什么意思？" },
+    { "id": "03", "speaker": "male",   "emotion": "emphatic", "text": "简单来说…" }
   ],
 
   "slides": [                               // ordered visual components (see types below)
     { "type": "keypoint",
       "eyebrow": "核心逻辑",
+      "icon": "cube",                        // cute flat illustration key (see catalog)
       "statement": "价格只是横盘,真正收紧的是三条逻辑链。",
-      "support": "算力去周期化 · 机构化 · 利率锚定" },
+      "support": "算力去周期化 · 机构化 · 利率锚定",
+      "analysis": "真正的问题不在价格,而在现金流:谁能把算力卖成稳定收入,谁就拿到下一轮定价权。",
+      "callback": ["呼应开头:宏观利率压力正是矿企抛币的推手"] },
 
     { "type": "three_points",
       "title": "今日三条主线",
+      "icon": "net",
       "points": [
         { "no": "01", "title": "算力去周期化", "body": "矿工费占比创十年新低,收益结构转向算力 + AI 租赁。" },
         { "no": "02", "title": "机构化",        "body": "ETF 与储备模型把算力资产纳入受审计的资产负债表。" },
@@ -123,6 +127,20 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
 - `podcast[]` is the spine. Each turn is `{ id, speaker: "male"|"female", text }`. The `speaker` drives which TTS voice (male = `roles.maleVoice`, female = `roles.femaleVoice`) and the caption color (left-border tint).
 - Male = confident explainer (老高式); female = curious questioner (小茉式). Write natural back-and-forth, not monologue split in half.
 - Total `text` length ≈ `meta.target_seconds` at ~3.2–3.6 chars/sec for zh, ~2.4 words/sec for en.
+
+**Anti-"AI flavor" dialogue rules (top user complaint — read before writing ANY turn):**
+
+1. **Vary sentence rhythm.** No two adjacent turns may be the same length. Alternate a short punchy reaction (1–2 clauses) with a longer explanation. Uniform paragraph-blocks read as TTS.
+2. **Emotional beats.** Tag every turn with an optional `emotion` from the catalog (`neutral/calm/serious/curious/excited/surprised/warm/doubtful/relieved/emphatic`). Map it to the *content*, not decoration: a surprising number → `surprised`, a regulator setback → `serious`, a conclusion → `emphatic`. The TTS engine shifts pacing per turn — uniform pacing is the #1 "AI voice" tell.
+3. **Spoken, not written.** Use short sentences, dashes, rhetorical questions, and light fillers ("说白了", "注意这里", "有意思的是"). Ban essay-language: no "综上所述", "值得注意的是", no balanced-clause formality. If it looks like it could be a press release, rewrite it.
+4. **Female co-host reacts, doesn't just ask.** Every 2–3 male turns, she must react emotionally (surprise, doubt, a "wait, really?" beat) or *link back* ("这和我们开头说的零售数据是一条逻辑"). Not every female turn is a question.
+5. **One fact, then the story.** Each chapter: lead with the concrete fact/number, then the *so-what* — what it means, who it affects, why it's worth caring about. Facts alone are a newswire; the so-what is the podcast.
+
+**Slide fields (anti-AI-flavor visual layer):**
+
+- `icon`: pick a cute flat illustration key from the catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake`). The template owns the SVG; you only pick. Matches the chapter's topic (e.g. miner chapter → `pick`, macro → `chart`, post-quantum → `atom`).
+- `analysis`: a 1–2 sentence so-what line rendered as a distinct "分析 / SO-WHAT" chip under the bullets. Must be a *specific* inference tied to the numbers above — never a generic slogan.
+- `callback`: one or more short strings that connect this chapter to another (e.g. `"呼应开头:零售 -0.6% 的宏观压力"`). Rendered as small `↳` tags — this is the visible "information linking" layer.
 
 **Slide rules:**
 

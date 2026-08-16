@@ -55,6 +55,23 @@ FEMALE_VOICE_ALT = "zh-CN-XiaoyiNeural"
 # English single-voice (user-specified for the EN video).
 EN_VOICE = "en-US-AndrewNeural"
 
+# Per-turn emotional pacing. A turn may declare `emotion` (from the catalog
+# below) and the engine maps it to a slight Edge-TTS rate shift — humans don't
+# speak at a constant pace, and uniform pacing is the #1 "AI flavor" tell.
+# A turn may ALSO set an explicit `rate` string (e.g. "-6%"), which wins.
+EMOTION_RATE = {
+    "neutral": "-2%",     # default, matches global baseline
+    "calm": "-4%",        # reflective, slower
+    "serious": "-5%",     # gravity, slowed for emphasis
+    "curious": "-1%",     # inquisitive, normal-ish
+    "excited": "+5%",     # energy, quicker
+    "surprised": "+4%",   # a beat of shock
+    "warm": "-3%",        # softer, warmer
+    "doubtful": "-2%",    # skeptical, measured
+    "relieved": "-2%",    # exhale, steady
+    "emphatic": "-6%",    # conclusion punch, slow + weighty
+}
+
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 EDGE_SHIM = SKILL_ROOT / "scripts" / "edge_tts.py"
 COSY_SHIM = SKILL_ROOT / "scripts" / "cosyvoice_tts.py"
@@ -197,9 +214,15 @@ def main() -> None:
         # explicit per-turn voice wins, else resolve by speaker
         voice = turn.get("voice") or voice_for.get(speaker) or args.male_voice
 
+        # per-turn emotional pacing: explicit `rate` wins, else map `emotion`,
+        # else the global default. Uniform pacing across every turn reads as
+        # robotic — vary slightly by emotional beat.
+        emotion = (turn.get("emotion") or "neutral").strip().lower()
+        rate = turn.get("rate") or EMOTION_RATE.get(emotion, args.rate)
+
         if tts == "edge":
             sys.stdout.write(
-                f"· edge-tts [{idx}] speaker={speaker} voice={voice} rate={args.rate} … {text[:40]}…\n"
+                f"· edge-tts [{idx}] speaker={speaker} voice={voice} rate={rate} {emotion} … {text[:40]}…\n"
             )
             res = run(
                 [
@@ -212,7 +235,7 @@ def main() -> None:
                     "--voice",
                     voice,
                     "--rate",
-                    args.rate,
+                    rate,
                     "--volume",
                     args.volume,
                 ]
@@ -256,6 +279,8 @@ def main() -> None:
                 "id": turn.get("id", idx),
                 "speaker": speaker,
                 "voice": voice,
+                "emotion": emotion,
+                "rate": rate,
                 "text": text,
                 "file": rel,
                 "start": round(cursor, 3),

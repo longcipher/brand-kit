@@ -45,50 +45,34 @@ VALID_SCRIPT = {
     "tickerEn": [
         {"label": "BTC", "value": "64,210", "change": "+2.4%", "dir": "up"},
     ],
-    "panels": [
+    "slides": [
         {
-            "type": "market",
-            "title": "市场概览",
-            "start": 4.0,
-            "end": 18.0,
-            "stats": [
-                {"label": "总市值", "value": 2.31, "decimals": 2, "change": "+3.2%", "dir": "up"}
-            ],
-            "chart": {
-                "type": "line",
-                "categories": ["Mon", "Tue", "Wed"],
-                "series": [{"name": "Idx", "data": [10, 12, 11]}],
-            },
+            "type": "keypoint",
+            "eyebrow": "核心观点",
+            "icon": "spark",
+            "statement": "市场进入横盘,但结构性信号在累积。",
+            "analysis": "价格只是表层,真正的变化在结构与机制。",
+            "callback": ["呼应开场:宏观压力是今天的暗线"],
+            "bullets": ["事实一", "事实二"],
         },
         {
-            "type": "news",
-            "title": "今日要点",
-            "start": 18.0,
-            "end": 34.0,
-            "cards": [
-                {"tag": "INFO", "title": "标题一", "body": "摘要", "warn": False},
-                {"tag": "WARN", "title": "标题二", "body": "摘要", "warn": True},
-                {"tag": "INFO", "title": "标题三", "body": "摘要", "warn": False},
+            "type": "three_points",
+            "title": "今日三条主线",
+            "points": [
+                {"no": "01", "title": "算力", "body": "矿企把算力迁向 AI。"},
+                {"no": "02", "title": "机构", "body": "ETF 与储备纳入资产负债表。"},
+                {"no": "03", "title": "利率", "body": "代币化美债锚定无风险利率。"},
             ],
-        },
-        {
-            "type": "quote",
-            "title": "观点",
-            "start": 34.0,
-            "end": 50.0,
-            "author": "KOL",
-            "text": "一句**重点**引用",
         },
     ],
-    "panelsEn": [
+    "slidesEn": [
         {
-            "type": "news",
-            "title": "Today",
-            "start": 4.0,
-            "end": 18.0,
-            "cards": [
-                {"tag": "INFO", "title": "Headline", "body": "Body", "warn": False},
-            ],
+            "type": "keypoint",
+            "eyebrow": "Core Point",
+            "icon": "rocket",
+            "statement": "Market chops sideways, but structural signals build.",
+            "analysis": "Price is the surface; structure is the story.",
+            "bullets": ["Fact one", "Fact two"],
         },
     ],
     "podcast": [
@@ -189,12 +173,12 @@ def test_build_composition(work: Path) -> None:
     # Captions + audio clips are injected at runtime from window.LC_DATA, so
     # assert on the data payload markers instead of static DOM nodes.
     assert "window.LC_DATA" in html
-    # three dialogue turns => three "speaker" keys in the embedded payload
-    assert html.count('"speaker"') == 3
+    # three dialogue turns => each turn (and each of its cues) carries speaker
+    assert html.count('"speaker"') >= 3
     assert '"female"' in html
     assert '"male"' in html
     assert 'data-duration="12.5"' in html  # total + 0.5s tail
-    assert 'id="panels"' in html
+    assert 'id="stage"' in html
 
 
 def test_build_composition_missing_timings(work: Path) -> None:
@@ -205,6 +189,7 @@ def test_build_composition_missing_timings(work: Path) -> None:
         str(work / "script.json"),
         "--out",
         str(out),
+        cwd=work,  # isolate: no dist/speaker_timestamps.json inside the tmp dir
     )
     assert res.returncode == 1
     assert "timings" in res.stderr
@@ -260,8 +245,9 @@ def test_build_composition_english(work: Path) -> None:
     assert res.returncode == 0, res.stderr
     html = (out / "index.html").read_text(encoding="utf-8")
     assert '"lang": "en"' in html
-    assert "en-US-AndrewNeural" in html  # EN voice used for both speakers
-    # English panel text, not the zh panel text
-    assert "Today" in html
-    assert "今日要点" not in html
-    assert '"Host"' in html  # enRoles.male
+    assert "en-US-AndrewNeural" in html  # EN voice carried on turns payload
+    # English slide text + its icon survive into the LC_DATA payload (the
+    # template's zh fallback string is static template source, not data).
+    assert "Core Point" in html
+    assert "Market chops sideways" in html
+    assert "rocket" in html  # slidesEn[0].icon survives into the payload

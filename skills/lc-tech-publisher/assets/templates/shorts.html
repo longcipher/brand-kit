@@ -31,6 +31,18 @@
       .scanline { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; pointer-events: none;
         background: linear-gradient(90deg, transparent, var(--accent-hair), transparent); opacity: 0; }
 
+      /* playful background decorations — tiny brand-blue glyphs at the frame
+         edges, below the content layers */
+      #bg-deco { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+      #bg-deco .deco { position: absolute; will-change: transform; }
+      #bg-deco .deco svg { width: 100%; height: 100%; display: block; }
+
+      /* mascot — cute robot, bottom-left above the footer, under content */
+      #mascot { position: absolute; left: 5%; bottom: 9%; width: 130px; height: 130px; z-index: 4;
+        pointer-events: none; filter: drop-shadow(0 6px 12px rgba(23,23,23,0.08)); }
+      #mascot svg { width: 100%; height: 100%; display: block; }
+      #mascot .mascot-eyes { transform-box: fill-box; transform-origin: center; }
+
       /* HERO (visible by default so the first frame is a full cover, like the
          landscape video — no GSAP fromTo hiding it at t=0). Rendered as a
          fixed-height surface card filling the upper half of the frame, so the
@@ -83,8 +95,16 @@
       .cat:last-child { border-bottom: none; }
       .cat .cat-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
       .cat .cat-no { font-family: "JetBrains Mono", monospace; font-size: 18px; font-weight: 700; color: var(--accent-text); letter-spacing: .04em; }
+      .cat .cat-illust { flex: 0 0 auto; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+        background: var(--accent-soft); border: 1px solid var(--accent-hair); border-radius: 12px; }
+      .cat .cat-illust svg { width: 30px; height: 30px; }
       .cat .cat-title { font-family: "JetBrains Mono", monospace; font-size: 16px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-text); }
       .cat .cat-bar { flex: 1; height: 1px; background: var(--line-strong); }
+      .cat .analysis { margin-top: 14px; display: flex; align-items: flex-start; gap: 12px;
+        background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 2px; }
+      .cat .analysis .an-tag { flex: 0 0 auto; font-family: "JetBrains Mono", monospace; font-size: 14px; letter-spacing: .12em;
+        text-transform: uppercase; color: var(--accent-text); padding-top: 3px; }
+      .cat .analysis .an-txt { font-size: 24px; font-weight: 500; line-height: 1.4; color: var(--ink); }
       .cat .statement { font-size: 38px; font-weight: 700; line-height: 1.22; color: var(--ink); letter-spacing: -0.01em; margin-bottom: 16px; }
       .cat .bullets { list-style: none; display: flex; flex-direction: column; gap: 12px; }
       .cat .bullets li { display: flex; align-items: baseline; gap: 14px; font-size: 27px; line-height: 1.34; color: var(--ink-200); }
@@ -135,6 +155,29 @@
         </div>
       </div>
 
+      <!-- playful background decorations (fixed hand-built set, GSAP-animated) -->
+      <div id="bg-deco"></div>
+
+      <!-- mascot: cute robot, bottom-left above the footer -->
+      <div id="mascot" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="8" aria-hidden="true">
+        <svg id="mascot-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+          <line x1="80" y1="44" x2="80" y2="26" stroke="#0a72ef" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="80" cy="19" r="8" fill="#0a72ef"/>
+          <circle cx="80" cy="90" r="52" fill="rgba(10,114,239,0.10)" stroke="#0a72ef" stroke-width="4"/>
+          <g class="mascot-eyes">
+            <circle cx="63" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
+            <circle cx="66" cy="84" r="5.5" fill="#0a63d0"/>
+            <circle cx="97" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
+            <circle cx="94" cy="84" r="5.5" fill="#0a63d0"/>
+          </g>
+          <path d="M72 108 Q80 116 88 108" fill="none" stroke="#0a63d0" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="50" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
+          <circle cx="110" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
+          <circle cx="66" cy="142" r="7" fill="#0a72ef"/>
+          <circle cx="94" cy="142" r="7" fill="#0a72ef"/>
+        </svg>
+      </div>
+
       <div class="sections-label">{{SECTIONS_LABEL}}</div>
 
       <div class="feed-viewport" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
@@ -154,6 +197,9 @@
         var DATA = window.LC_DATA || {};
         var HERO_HL = DATA.heroHeadlines || [];
         var CATS = DATA.categories || [];
+        /* Cute flat illustration catalog — injected by build_shorts.py from
+           assets/templates/_icons.js (single source of truth). */
+{{ICONS_JS}}
 
         // Hero headlines (top 4, two columns)
         var hlEl = document.getElementById("hero-hl");
@@ -167,11 +213,15 @@
           var bullets = (c.bullets || []).map(function (b) {
             return '<li><span class="b-dot"></span><span>' + b + '</span></li>';
           }).join("");
+          var ico = (c.icon && ICONS[c.icon]) ? '<span class="cat-illust">' + ICONS[c.icon] + '</span>' : "";
+          var an = c.analysis ? '<div class="analysis"><span class="an-tag">' + (DATA.lang === "en" ? "SO-WHAT" : "分析") + '</span><span class="an-txt">' + c.analysis + '</span></div>' : "";
           return '<div class="cat">'
             + '<div class="cat-head"><span class="cat-no">' + String(i + 1).padStart(2, "0") + '</span>'
+            + ico
             + '<span class="cat-title">' + c.eyebrow + '</span><span class="cat-bar"></span></div>'
             + '<div class="statement">' + c.statement + '</div>'
             + '<ul class="bullets">' + bullets + '</ul>'
+            + an
             + '</div>';
         }).join("");
 
@@ -186,6 +236,53 @@
 
         var tl = gsap.timeline({ paused: true });
         var D = parseFloat("{{DURATION}}") || 24;
+
+        // Playful background decorations — fixed hand-built set at the frame
+        // edges (bottom strip + left/right gutters clear of hero/feed/footer).
+        (function buildDeco() {
+          var box = document.getElementById("bg-deco");
+          var glyphs = [
+            // type, x%, y%, size, spin(deg), bobAmt
+            ["spark", 6, 6, 26, 0, 10], ["spark", 88, 4, 20, 120, 8],
+            ["spark", 92, 40, 18, 240, 9], ["spark", 5, 38, 18, 60, 7],
+            ["dot", 9, 12, 10, 40, 12], ["dot", 90, 12, 12, 200, 10],
+            ["dot", 4, 50, 9, 160, 8], ["dot", 94, 55, 9, 300, 9],
+            ["cross", 7, 22, 20, 90, 6], ["cross", 93, 25, 20, 210, 7],
+            ["ring", 5, 30, 18, 260, 8], ["ring", 90, 30, 16, 30, 9],
+            ["square", 8, 16, 12, 70, 10], ["square", 90, 68, 12, 340, 8],
+            ["square", 7, 60, 12, 230, 7], ["square", 88, 72, 14, 20, 9],
+          ];
+          var T = {
+            spark: '<svg viewBox="0 0 64 64"><path d="M32 6 c2.5 14 7 18.5 18 20 c-11 1.5 -15.5 6 -18 20 c-2.5 -14 -7 -18.5 -18 -20 c11 -1.5 15.5 -6 18 -20 Z" fill="rgba(10,114,239,0.14)"/></svg>',
+            dot: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="14" fill="rgba(10,114,239,0.16)"/></svg>',
+            cross: '<svg viewBox="0 0 64 64"><path d="M32 12 v40 M12 32 h40" stroke="rgba(10,114,239,0.28)" stroke-width="9" stroke-linecap="round"/></svg>',
+            ring: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="16" fill="none" stroke="rgba(10,114,239,0.30)" stroke-width="6"/></svg>',
+            square: '<svg viewBox="0 0 64 64"><rect x="14" y="14" width="36" height="36" rx="8" fill="rgba(10,114,239,0.14)"/></svg>',
+          };
+          glyphs.forEach(function (g, i) {
+            var el = document.createElement("div");
+            el.className = "deco";
+            el.style.cssText = "left:" + g[1] + "%;top:" + g[2] + "%;width:" + g[3] + "px;height:" + g[3] + "px;";
+            el.innerHTML = T[g[0]];
+            box.appendChild(el);
+            var bobDur = 3.0 + (i % 5) * 0.5;
+            var spins = Math.max(2, Math.round(D / bobDur));
+            tl.to(el, { y: g[5], rotation: g[4], duration: bobDur, ease: "sine.inOut", yoyo: true, repeat: spins, delay: (i % 3) * 0.35 }, 0);
+          });
+        })();
+
+        // Mascot — float + blink, finite repeats sized to the composition.
+        (function buildMascot() {
+          var m = document.getElementById("mascot");
+          var floatCycles = Math.max(3, Math.round(D / 4.2));
+          tl.fromTo(m, { y: 0 }, { y: -16, duration: 2.1, ease: "sine.inOut", yoyo: true, repeat: floatCycles }, 0);
+          var blinkCycles = Math.max(3, Math.round(D / 5));
+          for (var b = 0; b < blinkCycles; b++) {
+            var at = 1.5 + b * 5;
+            tl.to(".mascot-eyes", { scaleY: 0.08, transformOrigin: "50% 50%", duration: 0.08, ease: "power2.in" }, at);
+            tl.to(".mascot-eyes", { scaleY: 1, transformOrigin: "50% 50%", duration: 0.12, ease: "power2.out" }, at + 0.09);
+          }
+        })();
 
         // Hero MUST stay visible at t=0 — the first frame / poster is the cover.
         // A `from` tween at timeline position 0 renders its "from" state at t=0,

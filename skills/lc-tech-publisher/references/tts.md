@@ -131,6 +131,33 @@ WAV via `inference_zero_shot`. Output WAV sample rate follows the model
 | Edge | `--rate` | `-10%` | `-2%` | `+5%` |
 | CosyVoice3 | `--speed` | `0.8–0.9` | `1.0` | `1.1–1.2` |
 
+### Per-turn emotional pacing (anti-AI-flavor)
+
+`generate_audio.py` maps each turn's optional `emotion` (or explicit `rate`
+string) to a per-turn Edge-TTS rate shift — uniform pacing is the #1 "AI voice"
+tell. The mapping (defined in `generate_audio.py:EMOTION_RATE`):
+
+| emotion | Edge rate | Use when… |
+|---------|-----------|-----------|
+| `neutral` | `-2%` | bridge / default |
+| `calm` | `-4%` | opening, settling |
+| `serious` | `-5%` | regulators, hacks, losses |
+| `curious` | `-1%` | co-host asks |
+| `excited` | `+5%` | a surprising win / milestone |
+| `surprised` | `+4%` | an unexpected number |
+| `warm` | `-3%` | human angle |
+| `doubtful` | `-2%` | skepticism |
+| `relieved` | `-2%` | tension resolved |
+| `emphatic` | `-6%` | conclusion / punch line |
+
+- An explicit `turn.rate` (e.g. `"-6%"`) always wins over the emotion mapping.
+- The resolved `emotion`/`rate` are recorded per turn in
+  `speaker_timestamps.json`, so the video layer can mirror them if needed.
+- Rule of thumb: **vary adjacent turns** — no two consecutive turns on the same
+  rate. Slight shifts (±1–3%) are enough; extremes read as drama-queen AI.
+- CosyVoice3: `emotion` is recorded but currently ignored for pacing (single
+  global `--speed`).
+
 ## 4. Speaker Timeline Metadata (`speaker_timestamps.json`)
 
 Neither backend returns word timestamps; turn-level timing is derived

@@ -80,12 +80,17 @@ component templates consume. Visual fidelity is guaranteed by the templates
 
 ## Slide component types (must be one of these)
 
+Every slide may also carry these **anti-AI-flavor** fields:
+- `icon` — a key from the fixed cute-illustration catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake`). The template owns the SVG art; you only pick a topic-matching key. Unknown keys fall back to `spark`.
+- `analysis` — 1–2 sentence so-what line, rendered as a distinct "分析 / SO-WHAT" chip under the bullets. Must be a *specific* inference tied to that chapter's numbers, never a generic slogan.
+- `callback` — string or array of short strings linking this chapter to another, rendered as small `↳` tags (the visible information-connection layer). Example: `"呼应开头:零售 -0.6% 的宏观压力"`.
+
 | `type` | Required fields | Renders via |
 |--------|----------------|-------------|
-| `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | inline in `dashboard.html` (keypoint branch) |
-| `three_points` | `points[3]` each `{ no, title, body }`, optional `title`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (three_points branch) |
-| `table` | `head[≥2]` (string column headers), `rows[]` (each row must have the same cell count as `head`), optional `numCols` (array of 0-based column indices rendered right-aligned in mono blue), optional `title`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (table branch) |
-| `outro` | `recap` (string), optional `signoff`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (outro branch) |
+| `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `icon`/`analysis`/`callback`, optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | inline in `dashboard.html` (keypoint branch) |
+| `three_points` | `points[3]` each `{ no, title, body }`, optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (three_points branch) |
+| `table` | `head[≥2]` (string column headers), `rows[]` (each row must have the same cell count as `head`), optional `numCols` (array of 0-based column indices rendered right-aligned in mono blue), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (table branch) |
+| `outro` | `recap` (string), optional `signoff`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (outro branch) |
 
 ### Keeping the center zone in sync with the narration
 
@@ -110,7 +115,7 @@ credibly than prose and keeps the screen's static document zone information-dens
 
 ## Dialogue rules
 
-- `podcast[]` is an ordered array `{ id, speaker: "male"|"female", text }`.
+- `podcast[]` is an ordered array `{ id, speaker: "male"|"female", text, emotion? }`.
   `speaker` drives the TTS voice and the caption accent.
 - Male = confident explainer (老高式); female = curious questioner (小茉式).
   Natural back-and-forth, not a monologue split in half.
@@ -118,6 +123,45 @@ credibly than prose and keeps the screen's static document zone information-dens
 - Keep emotion/price-panic out; favor mechanism, logic chains, deeper causes.
 - Total `text` length ≈ `target_seconds` at ~3.0–3.4 chars/sec (zh),
   ~2.2–2.5 words/sec (en). For an ~11 min video target ≈ 2000–2400 zh chars.
+
+### `emotion` — per-turn emotional pacing (anti-AI-flavor)
+
+Each turn may set `emotion` from a fixed catalog. It drives a **per-turn speech-rate
+shift** (Edge TTS), so the narration breathes instead of reading at a constant
+machine pace. Map the emotion to the *content*, not decoration:
+
+| emotion | Effect | Use when… |
+|---------|--------|-----------|
+| `neutral` | baseline | default, bridge turns |
+| `calm` | -4% slower | opening, settling a topic |
+| `serious` | -5% slower | regulators, hacks, losses |
+| `curious` | -1% | co-host asking |
+| `excited` | +5% faster | a surprising win, a milestone |
+| `surprised` | +4% | a genuinely unexpected number |
+| `warm` | -3% | soft framing, human angle |
+| `doubtful` | -2% | skepticism, "wait, really?" |
+| `relieved` | -2% | a tension resolved |
+| `emphatic` | -6% slower | the conclusion / punch line |
+
+Rules:
+- **Vary adjacent turns** — never two `neutral` in a row on the same pacing.
+- Prefer `serious`/`emphatic` for the last turn of a chapter (weight), and
+  `excited`/`surprised` on the beat that deserves it.
+- A turn may instead set an explicit `rate` string (e.g. `"-6%"`), which wins
+  over the emotion mapping.
+- Uniform pacing is the #1 "AI voice" tell — vary it by emotion on every chapter.
+
+### Anti-AI-flavor writing (top user complaint)
+
+1. **Short + long alternation.** No two adjacent turns the same length. Mix a
+   punchy 1–2 clause reaction with a longer explainer.
+2. **Spoken, not written.** Short sentences, dashes, rhetorical questions, light
+   fillers ("说白了", "注意", "有意思的是"). Ban press-release prose
+   ("综上所述", balanced clauses).
+3. **React, don't just ask.** The female co-host reacts emotionally or links
+   back to an earlier chapter; not every turn is a question.
+4. **One fact, then the story.** Lead with the concrete number, then the
+   so-what (what it means, who it affects). Facts alone are a newswire.
 
 ## Bilingual output
 

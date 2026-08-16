@@ -154,3 +154,59 @@ lives in the fixed templates. Per-domain flavor (vocabulary, headline copy) live
 
 The mode is a **prompting/structuring hint**, not a separate engine — both use
 the same 4 fixed components.
+
+## 10. Illustration Layer — cute flat stickers (the "human touch")
+
+A deliberate, restrained exception to §0's "no pillowy corners": a **flat cute
+illustration chip** that makes each slide feel less like a slide and more like a
+knowledge card. The LLM never writes SVG — it picks a key from the fixed catalog
+(`_icons.js`, injected into `dashboard.html` / `shorts.html`):
+
+- **Catalog** (15 keys): `shield`, `rocket`, `chart`, `coins`, `cube`, `atom`,
+  `bolt`, `net`, `lock`, `spark`, `pick`, `scale`, `bot`, `bank`, `handshake`.
+  Each is brand-blue line art (`--accent` strokes, `--accent-text` details) on
+  an `--accent-soft` chip with a 1px `--accent-hair` border and the rest
+  shadow stack. Radius ≤ 16px on the chip ONLY (illustrations are the one place
+  rounded forms are allowed); UI surfaces keep the 2px ceiling.
+- **Placement**: keypoint / three_points / table / outro slides render the chip
+  top-right (150×150px in the video, 44×44px in shorts). The keypoint stage
+  gains `has-illust` padding (right: 24%) so the statement never collides.
+- **Motion**: pop in with `back.out(1.7)` overshoot, then a gentle idle
+  `rotation ±6°` yoyo wobble (0.9s, sine.inOut) — alive but not frantic.
+- **Fallback**: an unknown `icon` key renders `spark` (the template's default),
+  and a slide with no `icon` renders no chip. Never a broken image.
+
+## 11. Analysis Chip & Callback Tags (information association)
+
+Two fixed elements turn a list of facts into a *connected argument*:
+
+- **Analysis chip** — `s.analysis` renders as a distinct "分析 / SO-WHAT" strip
+  under the bullets: `--accent-soft` background, 3px `--accent` left border,
+  mono label + 23px ink text. It is the *so-what* inference anchored to the
+  chapter's numbers — never a generic slogan.
+- **Callback tags** — `s.callback` (string or array) renders as small bordered
+  `↳` tags under the analysis: 16px JetBrains Mono, `--ink-300` text, 2px
+  radius, `--accent-text` arrow. These make cross-chapter links visible, so the
+  viewer sees *why* the chapters belong together.
+
+## 12. Mascot & Background Decorations (the "living frame")
+
+The canvas itself is alive, not just the slides — but always in the background
+layer (z-index 4, under the slides at 5) so nothing is ever occluded:
+
+- **Mascot** — a cute hand-drawn brand-blue robot (`#mascot` in dashboard /
+  shorts / cover). It floats gently (`y: ±14px`, 2.1s sine.inOut, finite
+  repeat sized to the composition) and blinks on a fixed cadence (`scaleY
+  0.08→1` on `.mascot-eyes`, which needs `transform-box: fill-box`). Bottom-
+  right in the landscape video, bottom-left in vertical shorts, bottom-right on
+  the static cover. **It never hides content**: z-index 4 sits under the slide
+  layer, and the slides have transparent backgrounds so the robot stays visible
+  as a quiet companion.
+- **Background glyphs** — a fixed hand-built set of tiny brand-blue shapes
+  (spark / dot / cross / ring / square) scattered at the frame edges, each
+  bobbing and slowly rotating on its own phase (`tl.to(el, {y, rotation},
+  sine.inOut, yoyo, finite repeat)`). Below the slides (z-index 1), they add
+  texture without competing with the center content.
+- **Rule**: like every other animation, the deco/mascot tweens use **finite**
+  repeat counts derived from the composition duration — `repeat:-1` is rejected
+  by the checker on a finite composition.

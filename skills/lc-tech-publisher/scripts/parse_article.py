@@ -58,6 +58,14 @@ def _validate_dialogue(podcast, key: str, errors: list[str]) -> None:
             errors.append(f"{key}[{i}].text is required (the spoken line)")
         if t.get("voice") is not None and not isinstance(t.get("voice"), str):
             errors.append(f"{key}[{i}].voice must be a string if present")
+        emo = t.get("emotion")
+        if emo is not None and emo not in VALID_EMOTIONS:
+            errors.append(
+                f"{key}[{i}].emotion must be one of {sorted(VALID_EMOTIONS)} (got {emo!r})"
+            )
+        rate = t.get("rate")
+        if rate is not None and not isinstance(rate, str):
+            errors.append(f"{key}[{i}].rate must be an Edge-TTS rate string like '-4%'")
 
 
 def _validate_ticker(ticker, key: str, errors: list[str]) -> None:
@@ -74,6 +82,19 @@ def _validate_ticker(ticker, key: str, errors: list[str]) -> None:
 
 VALID_SLIDE_TYPES = {"keypoint", "three_points", "outro", "table"}
 
+# Fixed cute-illustration catalog (must match `ICONS` in dashboard.html /
+# shorts.html). The LLM picks a key; unknown keys fall back to "spark".
+VALID_ICONS = {
+    "shield", "rocket", "chart", "coins", "cube", "atom", "bolt",
+    "net", "lock", "spark", "pick", "scale", "bot", "bank", "handshake",
+}
+
+# Emotional pacing catalog (must match `EMOTION_RATE` in generate_audio.py).
+VALID_EMOTIONS = {
+    "neutral", "calm", "serious", "curious", "excited", "surprised",
+    "warm", "doubtful", "relieved", "emphatic",
+}
+
 
 def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> None:
     """Validate the slides[] array (keypoint / three_points / outro / table)."""
@@ -88,6 +109,22 @@ def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> N
         if stype not in VALID_SLIDE_TYPES:
             errors.append(f"{key}[{i}].type must be one of {sorted(VALID_SLIDE_TYPES)} (got {stype!r})")
             continue
+        icon = s.get("icon")
+        if icon is not None and icon not in VALID_ICONS:
+            warns.append(f"{key}[{i}].icon '{icon}' unknown — falls back to 'spark'")
+        if s.get("analysis") is not None and not isinstance(s.get("analysis"), str):
+            errors.append(f"{key}[{i}].analysis must be a string (the so-what line)")
+        cbs = s.get("callback")
+        if cbs is not None:
+            if isinstance(cbs, str):
+                cbs = [cbs]
+            elif not isinstance(cbs, list):
+                errors.append(f"{key}[{i}].callback must be a string or array of strings")
+                cbs = None
+            if cbs is not None:
+                for j, cb in enumerate(cbs):
+                    if not isinstance(cb, str) or not cb:
+                        errors.append(f"{key}[{i}].callback[{j}] must be a non-empty string")
         if stype == "keypoint":
             if not s.get("statement"):
                 errors.append(f"{key}[{i}].statement is required for keypoint slides")

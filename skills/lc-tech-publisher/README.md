@@ -69,7 +69,8 @@ skills/lc-tech-publisher/
 │   └── templates/
 │       ├── cover.html         # 浅色封面模板(比例自适应,data-duration=2.4s)
 │       ├── dashboard.html      # 浅色视频主模板(5 种 slide 内嵌 + caption + audio clips)
-│       └── shorts.html         # 浅色竖屏 9:16 短视频模板
+│       ├── shorts.html         # 浅色竖屏 9:16 短视频模板
+│       └── _icons.js           # 可爱风平涂图标库(单一来源,{{ICONS_JS}} 注入 dashboard/shorts)
 └── README.md
 ```
 
@@ -88,6 +89,9 @@ skills/lc-tech-publisher/
 
 - **固定 4 套模板,LLM 只产 JSON**:视觉风格由手工模板决定(`cover` / `keypoint` / `three_points` / `outro`),LLM 写标题、金句、三点、结尾 — 不写任何 CSS。同一脚本每天都长得一样,且严格遵循 DESIGN.md(浅底、单一品牌蓝 `#0a72ef`、DM Sans + JetBrains Mono、2px ceiling、shadow-as-border)。
 - **默认免费双人声 + 英文单声线**:中文用 Edge Neural TTS(男 `zh-CN-YunxiNeural` + 女 `zh-CN-XiaoxiaoNeural`);英文版统一用 `en-US-AndrewNeural`。零 API key、无参考录音,`uv sync` 安装 `edge-tts` + 联网即可。可选 `--tts cosyvoice` 切 CosyVoice3 品牌声线。
+- **去"AI 味"内容层**:对话每轮可标 `emotion`(calm/serious/excited/emphatic 等),`generate_audio.py` 映射成**逐轮语速微调**(Edge `--rate`),让旁白有呼吸感而非匀速机读;写作规则强制长短句交替、口语化、女主播真实反应、事实+so-what。详见 `references/script-schema.md` / `motion-audio.md`。
+- **可爱风插画层**:固定 15 枚手工 SVG 平涂小图标(`_icons.js` 单一来源,由 `build_*` 注入模板)。LLM 通过 slide 的 `icon` 字段**选**图标、`analysis` 填"分析/SO-WHAT"块、`callback` 填跨章节"↳ 呼应"标签 —— 视觉上把信息串成一条有连接、有观点的叙述。图标 chip 有 pop-in + 轻柔摇摆动画。详见 `references/brand-design.md` §10–11。
+- **吉祥物 + 背景装饰**(让画面"活"起来):品牌蓝小机器人吉祥物常驻画面角落(视频右下 / 竖屏左下 / 封面右下),全程漂浮 + 定时眨眼;背景层散布 5 种低透明度小图形(spark/dot/cross/ring/square)各自漂浮旋转。全部置于 slide 之下(z-index 4),永远不遮挡内容。详见 `brand-design.md` §12。
 - **音画精确对齐**:说话人时间轴 `speaker_timestamps.json` 直接取 ffprobe 测得的真实音频时长;caption 在 `turns[].start/end` 处切换;slides 在 `[HERO_DURATION, total]` 区间均匀分布。
 - **浅色 + 领域无关**:所有生成 HTML 严格遵循 `references/brand-design.md`(浅底 `#fafbfc`、单一品牌蓝、DM Sans + JetBrains Mono)。视觉品质与内容领域无关。
 - **确定性渲染**:相同输入永远产出相同视频。

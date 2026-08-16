@@ -38,6 +38,13 @@ stays consistent.
 | Keypoint statement (rise + fade) | `power3.out` | 0.7s |
 | Three-points card stagger (rise + fade) | `power3.out` | 0.6s, `stagger: 0.12` |
 | Outro card (rise + fade) | `power3.out` | 0.7s |
+| Illustration pop-in (scale 0.6→1) | `back.out(1.7)` | 0.5s, `transformOrigin: center` |
+| Illustration idle wobble (rotation ±6°) | `sine.inOut`, `yoyo:true`, finite repeat | 0.9s |
+| Mascot float (y ±14px, whole show) | `sine.inOut`, `yoyo:true`, finite repeat | 2.1s |
+| Mascot blink (eyes scaleY 0.08→1) | `power2.in/out`, every 5s | 0.08s + 0.12s |
+| Deco glyph bob+spin (per glyph, whole show) | `sine.inOut`, `yoyo:true`, finite repeat | 3.0–5.6s |
+| Analysis chip (rise + fade) | `power2.out` | 0.5s |
+| Callback tag stagger (slide from left) | `power2.out` | 0.45s, `stagger: 0.12` |
 | Caption pop-in | `power3.out` | 0.2s |
 | Caption fade-out | (linear) | 0.18s |
 | Master fade-out tail | `power2.inOut` | 0.5s |
@@ -99,11 +106,35 @@ speaker timeline for video caption + slide sync.
 
 ### Dialogue rules
 
-- `podcast[]` is an ordered array of turns: `{ id, speaker, voice?, text }`.
+- `podcast[]` is an ordered array of turns: `{ id, speaker, emotion?, rate?, voice?, text }`.
 - Female inserts a real question / reaction every 2–3 male lines (no dead air).
 - Caption shows the *current* speaker's line; speaker differentiation is the
-  caption's left-border tint (male = `--accent` blue, female = `--ink-300` grey).
+  caption's left-border tint (male = `--accent` blue, female = `--ink-300` grey —
+  the `.cap.sp-f` class set by `build_composition.py` from the cue's speaker).
 - Total pacing ~3.2–3.6 chars/sec (zh) so slide beats land at the turn boundary.
+
+### Per-turn emotional pacing (anti-AI-flavor)
+
+Humans don't speak at a constant rate. Each turn may set `emotion` (or an
+explicit `rate` string) and `generate_audio.py` maps it to an Edge-TTS rate
+shift, so the narration breathes:
+
+| emotion | Edge rate | Use when… |
+|---------|-----------|-----------|
+| `neutral` | `-2%` | bridge / default |
+| `calm` | `-4%` | opening, settling |
+| `serious` | `-5%` | regulators, hacks, losses |
+| `curious` | `-1%` | co-host asks |
+| `excited` | `+5%` | a surprising win / milestone |
+| `surprised` | `+4%` | an unexpected number |
+| `warm` | `-3%` | human angle |
+| `doubtful` | `-2%` | skepticism |
+| `relieved` | `-2%` | tension resolved |
+| `emphatic` | `-6%` | conclusion / punch line |
+
+Rule: **vary adjacent turns** — no two consecutive turns on the same rate.
+Explicit `rate` on a turn wins over the emotion mapping. The resolved
+`emotion`/`rate` are recorded in `speaker_timestamps.json` per turn.
 
 ### Speaker timeline (`speaker_timestamps.json`)
 
@@ -163,8 +194,13 @@ dialogue chars):
   lines, borders, dots.
 - Greys `--ink-300 #565a63` / `--ink-400 #6b6e75` are tuned to clear 4.5:1 on
   both `#fafbfc` (canvas) and `#ffffff` (surface cards).
-- Captions are allowed to wrap multi-line; no `white-space: nowrap`, so long
-  CJK sentences render fully without ellipsis.
+- Captions are rendered **one line per cue**, split by
+  `subtitle_util.split_subtitles` so each cue fits ~2/3 of the frame width
+  (zh target 30 / hard_max 46 chars, en target 20 / hard_max 32 words). The
+  `.cap` element is `white-space: nowrap; overflow: hidden; text-overflow:
+  ellipsis` as a safety net — the real fix for long CJK is per-cue generation,
+  never CSS wrapping. Both the embedded captions and the `.srt` sidecar use the
+  same `split_subtitles`, so they stay character-identical.
 
 ## 7. Embedding rules
 

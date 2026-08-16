@@ -32,6 +32,20 @@
       .scanline { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; pointer-events: none;
         background: linear-gradient(90deg, transparent, var(--accent-hair), transparent); opacity: 0; }
 
+      /* playful background decorations — tiny brand-blue glyphs at the frame
+         edges, below the slides so they never fight the content */
+      #bg-deco { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+      #bg-deco .deco { position: absolute; will-change: transform; }
+      #bg-deco .deco svg { width: 100%; height: 100%; display: block; }
+
+      /* mascot — cute robot, bottom-right. z-index 4 keeps it in the background
+         layer (under the slides) so it never covers content; the slides have a
+         transparent background, so it stays visible as a quiet companion. */
+      #mascot { position: absolute; right: 3.5%; bottom: 4%; width: 120px; height: 120px; z-index: 4;
+        pointer-events: none; filter: drop-shadow(0 6px 12px rgba(23,23,23,0.08)); }
+      #mascot svg { width: 100%; height: 100%; display: block; }
+      #mascot .mascot-eyes { transform-box: fill-box; transform-origin: center; }
+
       #stage { position: absolute; inset: 0; z-index: 5; }
 
       /* embedded single-line caption (bottom) — one line at a time */
@@ -66,6 +80,29 @@
       </svg>
       <div class="scanline" id="scanline"></div>
 
+      <!-- playful background decorations (fixed hand-built set, animated by GSAP) -->
+      <div id="bg-deco"></div>
+
+      <!-- mascot: a cute little robot that floats, blinks and waves through the show -->
+      <div id="mascot" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="8" aria-hidden="true">
+        <svg id="mascot-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+          <line x1="80" y1="44" x2="80" y2="26" stroke="#0a72ef" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="80" cy="19" r="8" fill="#0a72ef"/>
+          <circle cx="80" cy="90" r="52" fill="rgba(10,114,239,0.10)" stroke="#0a72ef" stroke-width="4"/>
+          <g class="mascot-eyes">
+            <circle cx="63" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
+            <circle cx="66" cy="84" r="5.5" fill="#0a63d0"/>
+            <circle cx="97" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
+            <circle cx="94" cy="84" r="5.5" fill="#0a63d0"/>
+          </g>
+          <path d="M72 108 Q80 116 88 108" fill="none" stroke="#0a63d0" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="50" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
+          <circle cx="110" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
+          <circle cx="66" cy="142" r="7" fill="#0a72ef"/>
+          <circle cx="94" cy="142" r="7" fill="#0a72ef"/>
+        </svg>
+      </div>
+
       <div id="stage" data-layout-allow-overlap><!-- slides injected by build_composition.py --></div>
 
       <div id="captions"></div>
@@ -80,6 +117,14 @@
       var LOCKUP = '<div class="lockup"><img src="'+esc(DATA.logo||"logos/lc.svg")+'" alt=""><span>LongCipher</span></div>';
       function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
       function mono(s){ return '<span style="font-family:\'JetBrains Mono\',monospace">'+esc(s)+"</span>"; }
+
+      /* Cute flat illustration catalog — injected by build_composition.py from
+         assets/templates/_icons.js (single source of truth). The LLM picks a
+         key via the `icon` field; unknown keys fall back to "spark". */
+{{ICONS_JS}}
+      function iconSVG(name){
+        return ICONS[name] || ICONS.spark;
+      }
 
       /* ── Build slides ── */
       var slides = DATA.slides || [];
@@ -113,15 +158,21 @@
           var bullets = (s.bullets||[]).map(function(b){
             return '<li><span class="b-dot"></span><span class="b-txt">'+esc(b)+'</span></li>';
           }).join("");
+          var callbacks = (s.callback||[]).map(function(cb){
+            return '<span class="cb-tag"><span class="cb-arrow">↳</span><span class="cb-txt">'+esc(cb)+'</span></span>';
+          }).join("");
           html += ''
-            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            + '<section class="slide'+(s.icon?' has-illust':'')+'" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
             +   LOCKUP
             +   '<div class="accent-rule"></div>'
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="stage">'
             +     '<div class="eyebrow">'+esc(s.eyebrow||"核心观点")+'</div>'
             +     '<div class="statement">'+esc(s.statement||"")+'</div>'
             +     (s.support ? '<div class="support">'+esc(s.support)+'</div>' : '')
             +     (bullets ? '<ul class="bullets">'+bullets+'</ul>' : '')
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +     (callbacks ? '<div class="callbacks">'+callbacks+'</div>' : '')
             +   '</div>'
             +   '<div class="idx-tag">'+String(n).padStart(2,"0")+' / '+String(slides.length).padStart(2,"0")+'</div>'
             + '</section>';
@@ -137,6 +188,7 @@
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
             +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">SUMMARY</span><h2>'+esc(s.title||"三点总结")+'</h2></div>'
             +     '<div class="grid">'+pts+'</div>'
@@ -146,6 +198,7 @@
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
             +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="card">'
             +     '<div class="kicker">WRAP-UP</div>'
             +     '<div class="recap">'+esc(s.recap||"")+'</div>'
@@ -165,6 +218,7 @@
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
             +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">DATA</span><h2>'+esc(s.title||"数据一览")+'</h2></div>'
             +     '<div class="tbl-card">'
@@ -180,9 +234,10 @@
       var caps = "";
       var cueIdx = 0;
       (DATA.turns||[]).forEach(function(t){
-        var cues = t.cues && t.cues.length ? t.cues : [{ text: t.text, start: t.start, end: t.end }];
+        var cues = t.cues && t.cues.length ? t.cues : [{ text: t.text, speaker: t.speaker, start: t.start, end: t.end }];
         cues.forEach(function(c){
-          caps += '<div class="cap clip" data-cap="'+cueIdx+'" data-start="'+c.start+'" data-duration="'+((c.end-c.start)).toFixed(3)+'" data-track-index="100">'+esc(c.text)+'</div>';
+          var sp = c.speaker === "female" ? " sp-f" : "";
+          caps += '<div class="cap clip'+sp+'" data-cap="'+cueIdx+'" data-start="'+c.start+'" data-duration="'+((c.end-c.start)).toFixed(3)+'" data-track-index="100">'+esc(c.text)+'</div>';
           cueIdx++;
         });
       });
@@ -198,6 +253,64 @@
       /* ── GSAP timeline ── */
       var tl = gsap.timeline({ paused: true });
       tl.set(".cap", { autoAlpha: 0 }, 0);
+
+      /* ── Playful background decorations ──
+         A fixed, hand-built set of tiny brand-blue glyphs (star, dot, cross,
+         ring, square) scattered at the frame edges so they never collide with
+         the center content. Each glyph bobs up/down and gently rotates on its
+         own phase. Repeat counts are FINITE (derived from the composition
+         duration) — the checker rejects repeat:-1 on a finite composition. */
+      (function buildDeco(){
+        var box = document.getElementById("bg-deco");
+        var DUR = parseFloat("{{DURATION}}");
+        var glyphs = [
+          // type, x%, y%, size, spin(deg), bobAmt
+          ["spark", 4, 12, 26, 0, 10], ["spark", 91, 8, 18, 120, 8],
+          ["spark", 95, 86, 22, 240, 9], ["spark", 3, 82, 20, 60, 7],
+          ["dot", 8, 24, 10, 40, 12], ["dot", 88, 30, 12, 200, 10],
+          ["dot", 12, 74, 8, 160, 8], ["dot", 90, 66, 9, 300, 9],
+          ["cross", 7, 40, 22, 90, 6], ["cross", 93, 48, 24, 210, 7],
+          ["cross", 10, 60, 18, 330, 5], ["cross", 87, 18, 20, 150, 6],
+          ["ring", 5, 54, 24, 260, 8], ["ring", 94, 40, 20, 30, 9],
+          ["ring", 12, 30, 16, 110, 7], ["ring", 90, 78, 26, 280, 6],
+          ["square", 6, 66, 14, 70, 10], ["square", 92, 58, 12, 340, 8],
+          ["square", 9, 16, 12, 230, 7], ["square", 88, 90, 16, 20, 9],
+        ];
+        var T = {
+          spark: '<svg viewBox="0 0 64 64"><path d="M32 6 c2.5 14 7 18.5 18 20 c-11 1.5 -15.5 6 -18 20 c-2.5 -14 -7 -18.5 -18 -20 c11 -1.5 15.5 -6 18 -20 Z" fill="rgba(10,114,239,0.14)"/></svg>',
+          dot: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="14" fill="rgba(10,114,239,0.16)"/></svg>',
+          cross: '<svg viewBox="0 0 64 64"><path d="M32 12 v40 M12 32 h40" stroke="rgba(10,114,239,0.28)" stroke-width="9" stroke-linecap="round"/></svg>',
+          ring: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="16" fill="none" stroke="rgba(10,114,239,0.30)" stroke-width="6"/></svg>',
+          square: '<svg viewBox="0 0 64 64"><rect x="14" y="14" width="36" height="36" rx="8" fill="rgba(10,114,239,0.14)"/></svg>',
+        };
+        glyphs.forEach(function(g, i){
+          var el = document.createElement("div");
+          el.className = "deco";
+          el.style.cssText = "left:"+g[1]+"%;top:"+g[2]+"%;width:"+g[3]+"px;height:"+g[3]+"px;";
+          el.innerHTML = T[g[0]];
+          box.appendChild(el);
+          // every glyph has a unique slow bob + spin over the whole run
+          var bobDur = 3.4 + (i % 5) * 0.55;
+          var spins = Math.max(2, Math.round((DUR / bobDur)));
+          tl.to(el, { y: g[5], rotation: g[4], duration: bobDur, ease:"sine.inOut", yoyo:true, repeat:spins, delay:(i % 3) * 0.35 }, 0);
+        });
+      })();
+
+      /* ── Mascot ──
+         The cute robot floats gently the whole show and blinks on a fixed
+         cadence. Finite repeats only (derived from the composition duration). */
+      (function buildMascot(){
+        var m = document.getElementById("mascot");
+        var DUR = parseFloat("{{DURATION}}");
+        var floatCycles = Math.max(4, Math.round(DUR / 4.2));
+        tl.fromTo(m, { y: 0 }, { y: -14, duration: 2.1, ease:"sine.inOut", yoyo:true, repeat:floatCycles }, 0);
+        var blinkCycles = Math.max(4, Math.round(DUR / 5));
+        for (var b = 0; b < blinkCycles; b++) {
+          var at = 1.5 + b * 5;
+          tl.to(".mascot-eyes", { scaleY: 0.08, transformOrigin:"50% 50%", duration:0.08, ease:"power2.in" }, at);
+          tl.to(".mascot-eyes", { scaleY: 1, transformOrigin:"50% 50%", duration:0.12, ease:"power2.out" }, at + 0.09);
+        }
+      })();
 
       // hero / cover — immediateRender:false so GSAP does NOT hide these at
       // creation time (t=0). They stay visible per their CSS default, so a
@@ -246,6 +359,22 @@
         }
         tl.fromTo(el.querySelectorAll(".point"), { y:28, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out", stagger:0.12 }, start+0.4);
         tl.fromTo(el.querySelectorAll(".support, .signoff, .divider"), { autoAlpha:0 }, { autoAlpha:1, duration:0.5 }, start+0.7);
+        // cute illustration: pop in with a gentle overshoot, then a soft idle
+        // wobble. Repeat is FINITE and derived from the slide window so it
+        // always covers the slide without an infinite loop (the checker
+        // rejects repeat:-1 on a finite composition).
+        if (el.querySelector(".illust")) {
+          var wobbleCycles = Math.max(2, Math.round((end - start - 1.0) / 0.9));
+          tl.fromTo(el.querySelector(".illust"), { scale:0.6, autoAlpha:0, transformOrigin:"center" },
+            { scale:1, autoAlpha:1, duration:0.5, ease:"back.out(1.7)" }, start+0.3);
+          tl.to(el.querySelector(".illust"), { rotation:6, duration:0.9, ease:"sine.inOut", yoyo:true, repeat:wobbleCycles }, start+1.0);
+        }
+        if (el.querySelector(".analysis")) {
+          tl.fromTo(el.querySelector(".analysis"), { y:18, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.5, ease:"power2.out" }, start+0.8);
+        }
+        if (el.querySelector(".callbacks")) {
+          tl.fromTo(el.querySelectorAll(".cb-tag"), { x:-10, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.45, stagger:0.12, ease:"power2.out" }, start+0.9);
+        }
         if (el.querySelector(".tbl-card")) {
           tl.fromTo(el.querySelector(".tbl-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
           tl.fromTo(el.querySelectorAll(".tbl thead tr"), { autoAlpha:0 }, { autoAlpha:1, duration:0.4 }, start+0.45);
@@ -304,6 +433,9 @@
       /* keypoint */
       .slide .accent-rule { position:absolute; left:8%; top:22%; width:3px; height:56%; background:var(--accent); z-index:1; }
       .slide .stage { position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; justify-content:center; padding:0 14%; }
+      .slide.has-illust .stage { padding-right: 24%; }
+      .slide.has-illust .statement, .slide.has-illust .support, .slide.has-illust .bullets,
+      .slide.has-illust .analysis, .slide.has-illust .callbacks { max-width: 1080px; }
       .slide .eyebrow { font-family:"JetBrains Mono",monospace; font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:28px; display:flex; align-items:center; gap:14px; }
       .slide .eyebrow::before { content:""; width:28px; height:2px; background:var(--accent); }
       .slide .statement { font-size:60px; font-weight:700; line-height:1.22; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
@@ -342,6 +474,29 @@
       .slide .tbl tbody td.num { font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--accent-text); text-align:right; letter-spacing:.01em; }
       .slide .tbl tbody tr:nth-child(even) { background:rgba(23,23,23,0.018); }
       .slide .tbl tbody tr:last-child td { border-bottom:none; }
+      /* cute flat illustration chip (brand blue line art, accent-soft chip) */
+      .slide .illust { position:absolute; top:11%; right:7%; width:150px; height:150px; z-index:5;
+        display:flex; align-items:center; justify-content:center;
+        background:var(--accent-soft); border:1px solid var(--accent-hair);
+        border-radius:16px; box-shadow:var(--shadow-rest); }
+      .slide .illust svg { width:104px; height:104px; }
+      /* analysis chip — the "so what" layer, distinct from the fact bullets */
+      .slide .analysis { margin-top:26px; max-width:1240px; display:flex; align-items:flex-start; gap:16px;
+        background:var(--accent-soft); border-left:3px solid var(--accent);
+        padding:16px 22px; border-radius:2px; }
+      .slide .analysis .an-tag { flex:0 0 auto; font-family:"JetBrains Mono",monospace; font-size:15px;
+        letter-spacing:.12em; text-transform:uppercase; color:var(--accent-text); padding-top:5px; }
+      .slide .analysis .an-txt { font-size:23px; font-weight:500; line-height:1.45; color:var(--ink); }
+      /* callback tags — the "links to earlier chapters" connective tissue */
+      .slide .callbacks { margin-top:22px; display:flex; flex-wrap:wrap; gap:10px; max-width:1240px; }
+      .slide .cb-tag { display:inline-flex; align-items:center; gap:8px;
+        font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.03em;
+        color:var(--ink-300); border:1px solid var(--line); border-radius:2px; padding:7px 12px;
+        background:var(--surface); }
+      .slide .cb-tag .cb-arrow { color:var(--accent-text); font-weight:700; }
+      /* speaker-tinted captions: male = brand accent, female = ink grey */
+      .cap { border-left-color: var(--accent); }
+      .cap.sp-f { border-left-color: var(--ink-300); }
     </style>
   </body>
 </html>

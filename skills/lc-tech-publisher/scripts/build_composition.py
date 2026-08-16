@@ -64,11 +64,13 @@ def _split_turn_cues(turn: dict, lang: str) -> list[dict]:
     total_w = sum(weights) or 1
     out: list[dict] = []
     cursor = start
+    speaker = turn.get("speaker")
     for c, w in zip(cues_text, weights):
         dur = span * (w / total_w)
         seg_end = cursor + dur
         out.append({
             "text": c,
+            "speaker": speaker,
             "start": round(cursor, 3),
             "end": round(seg_end, 3),
         })
@@ -198,6 +200,9 @@ def main() -> None:
             {
                 "id": t.get("id"),
                 "speaker": t.get("speaker"),
+                "voice": t.get("voice", ""),
+                "emotion": t.get("emotion", ""),
+                "rate": t.get("rate", ""),
                 "text": t.get("text", ""),
                 "start": round(float(t.get("start", 0)), 3),
                 "end": round(float(t.get("end", 0)), 3),
@@ -213,6 +218,10 @@ def main() -> None:
     if not template_path.exists():
         die(f"missing template: {template_path}")
     html = template_path.read_text(encoding="utf-8")
+
+    icons_path = SKILL_ROOT / "assets" / "templates" / "_icons.js"
+    icons_js = icons_path.read_text(encoding="utf-8") if icons_path.exists() else "var ICONS = {};"
+    html = html.replace("{{ICONS_JS}}", icons_js)
 
     data_json = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     html = html.replace("window.LC_DATA = {};", f"window.LC_DATA = {data_json};")

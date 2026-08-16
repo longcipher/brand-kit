@@ -36,6 +36,13 @@ HYPERFRAMES_JSON = '{\n  "$schema": "https://hyperframes.heygen.com/schema/hyper
 TEMPLATE = "assets/templates/shorts.html"
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 
+# Fixed cute-illustration catalog — must match `ICONS` in shorts.html /
+# dashboard.html. The LLM picks a key; the template owns the actual SVG art.
+ICON_KEYS = [
+    "shield", "rocket", "chart", "coins", "cube", "atom", "bolt",
+    "net", "lock", "spark", "pick", "scale", "bot", "bank", "handshake",
+]
+
 DEFAULT_DURATION = 10.0
 # Per-category: how many key bullets to surface in the feed.
 DEFAULT_BULLETS = 3
@@ -154,6 +161,8 @@ def main() -> None:
             "eyebrow": eyebrow,
             "statement": statement,
             "bullets": bullets,
+            "icon": s.get("icon") if s.get("icon") in ICON_KEYS else None,
+            "analysis": s.get("analysis"),
         })
 
     if not categories:
@@ -181,6 +190,10 @@ def main() -> None:
     if not template_path.exists():
         die(f"missing template: {template_path}")
     html = template_path.read_text(encoding="utf-8")
+
+    icons_path = SKILL_ROOT / "assets" / "templates" / "_icons.js"
+    icons_js = icons_path.read_text(encoding="utf-8") if icons_path.exists() else "var ICONS = {};"
+    html = html.replace("{{ICONS_JS}}", icons_js)
 
     html = html.replace("{{LANG}}", lang)
     html = html.replace("{{DURATION}}", f"{duration:.2f}")
