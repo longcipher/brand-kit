@@ -104,10 +104,28 @@ npx --yes hyperframes render --quality standard # delivery render
 
 The render is deterministic: identical HTML input always produces identical MP4 output.
 
-## 5. Common Pitfalls
+## 5. The 4-Layer Visual Stack (deterministic)
+
+The video master (`dashboard.html`) composes four visual layers, all driven by the
+single GSAP timeline so Hyperframes can seek any exact frame:
+
+| Layer | Role | Implementation |
+|-------|------|----------------|
+| L0 Atmosphere | background depth (dither particles + breathing glow) | `<canvas id="atmo">` redrawn on every timeline seek via `tl.eventCallback("onUpdate", …)` — **no `Date.now()`/`requestAnimationFrame`** |
+| L1 Scene props | inline SVG icons / mockup wireframes | `_icons.js` catalog, injected per slide |
+| L2 Semantic UI | charts, counters, card spreads, steps | new slide branches (`chart`/`counter`/`cards`/`steps`) with GSAP-driven bars/counters/fan-outs |
+| L3 Kinetic typography | keyword highlight | `**keyword**` in copy → `.kt-hl` accent span |
+
+**Determinism rule:** every animation is a GSAP tween on the master timeline
+(`window.__timelines["master"]`). Canvas redraws read `tl.time()` inside the
+`onUpdate` callback — never a wall clock. All `repeat` counts are finite and
+derived from the composition duration (the checker rejects `repeat:-1`).
+
+## 6. Common Pitfalls
 
 - `data-duration` on scenes must match the real audio duration — a mismatch causes the scene to cut mid-word.
 - `<audio>` clips must be body-level siblings of the stage, not nested inside the composition root.
 - Do not animate layout properties; only `transform` and `opacity`.
 - Keep all media local under the project dir; CDN fonts/images at render time are fragile.
 - `hyperframes validate` / `inspect` are deprecated aliases of `check` — use `check`.
+- Canvas atmosphere must stay behind the slides (`z-index: 2`, slides at `z-index: 5`) and be `pointer-events: none`.

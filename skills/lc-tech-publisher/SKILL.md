@@ -126,7 +126,10 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
 
 - `podcast[]` is the spine. Each turn is `{ id, speaker: "male"|"female", text }`. The `speaker` drives which TTS voice (male = `roles.maleVoice`, female = `roles.femaleVoice`) and the caption color (left-border tint).
 - Male = confident explainer (老高式); female = curious questioner (小茉式). Write natural back-and-forth, not monologue split in half.
-- Total `text` length ≈ `meta.target_seconds` at ~3.2–3.6 chars/sec for zh, ~2.4 words/sec for en.
+- **Length gate (hard rule — do not under-fill).** Edge TTS speaks zh at **~5.3–5.7 chars/sec** (measured), NOT the old 3.2–3.6 estimate. Author to the real rate so the video actually reaches `target_seconds`:
+  - zh: `total_chars ≈ target_seconds × 5.5`. For an **11 min (660s)** video write **≥ 3600 zh chars**; for 12 min (720s) write **≥ 3900 zh chars**. A 2000–2400-char script only yields ~6–7 min — that is a failed gate.
+  - en: `total_words ≈ target_seconds × 2.2`. For 11 min write **≥ 1450 words**.
+  - After `generate_audio.py`, confirm `speaker_timestamps[_en].json.total` ≥ `target_seconds × 0.9`; if short, **expand facts inside existing turns** (never filler) and re-run until the gate passes.
 
 **Anti-"AI flavor" dialogue rules (top user complaint — read before writing ANY turn):**
 
@@ -138,16 +141,20 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
 
 **Slide fields (anti-AI-flavor visual layer):**
 
-- `icon`: pick a cute flat illustration key from the catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake`). The template owns the SVG; you only pick. Matches the chapter's topic (e.g. miner chapter → `pick`, macro → `chart`, post-quantum → `atom`).
+- `icon`: pick a cute flat illustration key from the catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake/trend/gauge/layers/flow`). The template owns the SVG; you only pick. Matches the chapter's topic (e.g. miner chapter → `pick`, macro → `chart`, post-quantum → `atom`, growth → `trend`/`gauge`, matrix → `layers`, process → `flow`).
 - `analysis`: a 1–2 sentence so-what line rendered as a distinct "分析 / SO-WHAT" chip under the bullets. Must be a *specific* inference tied to the numbers above — never a generic slogan.
 - `callback`: one or more short strings that connect this chapter to another (e.g. `"呼应开头:零售 -0.6% 的宏观压力"`). Rendered as small `↳` tags — this is the visible "information linking" layer.
 
 **Slide rules:**
 
 - `slides[]` is an ordered list of full-frame visual slices. The builder auto-distributes them across `[HERO_DURATION, total_audio]` evenly when `_start`/`_end` are absent. If the last slide is not `outro`, one is auto-appended.
-- Only **three** slide types are allowed (matching the hand-built templates):
-  - `keypoint` — single statement with eyebrow + optional mono `support`. Use for thesis, definitions, "one-line conclusions".
+- Slide types (matching the hand-built templates). **Pick by the copy's semantics, not the name** — a metric should be a `chart`/`counter`, a feature matrix a `cards`, a process a `steps`, never plain text (see `references/script-schema.md` §"Semantic-to-visual mapping"):
+  - `keypoint` — single statement with eyebrow + optional mono `support`. Use for thesis, definitions, "one-line conclusions". Wrap the key word in `**…**` for a kinetic-typography highlight (L3).
   - `three_points` — exactly 3 points, each with `no`, `title`, `body`. Use for "今日三条主线" / "three takeaways".
+  - `chart` — animated dither bar chart: `bars[]` each `{ label, value, suffix? }`, optional `max`. Use for growth/comparison/ranking ("效率提升 10 倍", "A 是 B 的 3 倍"). Bars grow + value counters roll (L2).
+  - `counter` — big animated metric: `value`, `label`, optional `prefix`/`suffix`/`delta`/`eyebrow`/`note`. Use for a single headline metric ("收入达 $5M"). The number rolls up (L2).
+  - `cards` — 3D card spread: `cards[]` each `{ no?, title, body }`. Use for feature/capability matrices ("支持三大平台"). Cards fan out (L2).
+  - `steps` — process/flow: `steps[]` each `{ no?, title, body }`. Use for "输入 → 分析 → 输出" pipelines. Connecting line draws in, nodes pulse (L2).
   - `outro` — closing card with `recap` + `signoff`. Use for wrap-up. **Required as last slide** (auto-appended if missing).
 - `cover.headlines[]` (4 items) raises cover information density so daily covers look different.
 
@@ -198,7 +205,7 @@ uv run python scripts/generate_audio.py --script dist/script.json --tts cosyvoic
 
 This produces `dist/audio[_en]/turn-NN.wav`, copies to `dist/video[_en]/audio/turn-NN.wav`, `dist/speaker_timestamps[_en].json` (per-turn `start`/`end`/`duration` + speaker + voice — the absolute timeline), and `dist/podcast_full[_en].wav`.
 
-**Gate**: `dist/speaker_timestamps.json` and `dist/speaker_timestamps_en.json` exist; every turn has `duration > 0`.
+**Gate**: `dist/speaker_timestamps.json` and `dist/speaker_timestamps_en.json` exist; every turn has `duration > 0`; **`total` ≥ `meta.target_seconds × 0.9`** for both languages (e.g. ≥ 594s for an 11-min target). If a language is short, expand facts inside existing turns and re-run — do not ship a sub-11-minute long video.
 
 ## Step 4 — Build the Covers (4 aspect ratios × 2 languages)
 

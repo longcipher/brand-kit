@@ -74,7 +74,7 @@ def split_subtitles(text: str, lang: str) -> list[str]:
         return []
 
     if lang == "en":
-        target, hard_max = 20, 32   # words per cue (~2/3 frame width)
+        target, hard_max = 12, 15   # words per cue (~fits 1500px @28px)
     else:
         target, hard_max = 30, 46   # CJK chars per cue (~2/3 frame width)
 

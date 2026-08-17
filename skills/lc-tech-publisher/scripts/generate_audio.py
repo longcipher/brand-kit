@@ -346,6 +346,20 @@ def main() -> None:
         json.dumps(timestamps, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
+    # Length gate: if the script declares a target duration, flag a short
+    # render. Edge TTS speaks zh at ~5.3–5.7 chars/sec (NOT the old 3.2–3.6
+    # estimate), so a 2000–2400-char script only yields ~6–7 min. Warn loudly
+    # so the author expands facts inside existing turns before shipping.
+    target = meta.get("target_seconds")
+    if target and timestamps["total"] < float(target) * 0.9:
+        warn(
+            f"LENGTH GATE: {lang} audio is {timestamps['total']:.0f}s, below "
+            f"target_seconds {target:.0f} × 0.9 = {float(target)*0.9:.0f}s. "
+            f"Expand facts inside existing turns (zh needs ≈{int(float(target)*5.5)} "
+            f"chars, en ≈{int(float(target)*2.2)} words) and re-run — do not ship "
+            f"a sub-{int(float(target)/60)}-minute long video."
+        )
+
     male_n = sum(1 for t in timing if t["speaker"] == "male")
     sys.stdout.write(
         f"✓ audio generated ({engine_label}, lang={lang}): {len(timing)} turns "

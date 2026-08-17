@@ -38,6 +38,9 @@
       #bg-deco .deco { position: absolute; will-change: transform; }
       #bg-deco .deco svg { width: 100%; height: 100%; display: block; }
 
+      /* L0 atmosphere canvas — sits above the grid/deco, below the slides */
+      #atmo { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+
       /* mascot — cute robot, bottom-right. z-index 4 keeps it in the background
          layer (under the slides) so it never covers content; the slides have a
          transparent background, so it stays visible as a quiet companion. */
@@ -83,6 +86,11 @@
       <!-- playful background decorations (fixed hand-built set, animated by GSAP) -->
       <div id="bg-deco"></div>
 
+      <!-- L0 atmosphere: deterministic Canvas 2D layer (dither particles + grid
+           pulse). Redrawn on every GSAP timeline seek via onUpdate — no
+           Date.now()/requestAnimationFrame, so Hyperframes can seek any frame. -->
+      <canvas id="atmo" width="1920" height="1080"></canvas>
+
       <!-- mascot: a cute little robot that floats, blinks and waves through the show -->
       <div id="mascot" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="8" aria-hidden="true">
         <svg id="mascot-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
@@ -117,6 +125,13 @@
       var LOCKUP = '<div class="lockup"><img src="'+esc(DATA.logo||"logos/lc.svg")+'" alt=""><span>LongCipher</span></div>';
       function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
       function mono(s){ return '<span style="font-family:\'JetBrains Mono\',monospace">'+esc(s)+"</span>"; }
+      /* Kinetic typography: `**keyword**` in any copy becomes a highlighted
+         accent span (L3). The LLM marks the word that carries the semantic
+         weight; the template owns the styling. */
+      function hl(s){
+        return String(s==null?"":s).replace(/\*\*([^*]+)\*\*/g, '<span class="kt-hl">$1</span>');
+      }
+      function escHl(s){ return hl(esc(s)); }
 
       /* Cute flat illustration catalog — injected by build_composition.py from
          assets/templates/_icons.js (single source of truth). The LLM picks a
@@ -156,7 +171,7 @@
         var sAttrs = ' data-start="'+sStart+'" data-end="'+sEnd+'"';
         if (s.type === "keypoint") {
           var bullets = (s.bullets||[]).map(function(b){
-            return '<li><span class="b-dot"></span><span class="b-txt">'+esc(b)+'</span></li>';
+            return '<li><span class="b-dot"></span><span class="b-txt">'+escHl(b)+'</span></li>';
           }).join("");
           var callbacks = (s.callback||[]).map(function(cb){
             return '<span class="cb-tag"><span class="cb-arrow">↳</span><span class="cb-txt">'+esc(cb)+'</span></span>';
@@ -168,10 +183,10 @@
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="stage">'
             +     '<div class="eyebrow">'+esc(s.eyebrow||"核心观点")+'</div>'
-            +     '<div class="statement">'+esc(s.statement||"")+'</div>'
-            +     (s.support ? '<div class="support">'+esc(s.support)+'</div>' : '')
+            +     '<div class="statement">'+escHl(s.statement||"")+'</div>'
+            +     (s.support ? '<div class="support">'+escHl(s.support)+'</div>' : '')
             +     (bullets ? '<ul class="bullets">'+bullets+'</ul>' : '')
-            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+escHl(s.analysis)+'</span></div>' : '')
             +     (callbacks ? '<div class="callbacks">'+callbacks+'</div>' : '')
             +   '</div>'
             +   '<div class="idx-tag">'+String(n).padStart(2,"0")+' / '+String(slides.length).padStart(2,"0")+'</div>'
@@ -224,6 +239,92 @@
             +     '<div class="tbl-card">'
             +       '<table class="tbl"><thead><tr>'+headCells+'</tr></thead><tbody>'+bodyRows+'</tbody></table>'
             +     '</div>'
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "chart") {
+          // Dither-style bar chart — bars grow up + value counters roll, all
+          // driven by the GSAP timeline (deterministic, no Date.now()).
+          var chartBars = (s.bars||[]).map(function(b){
+            return { label: b.label||"", value: parseFloat(b.value)||0, suffix: b.suffix||"" };
+          });
+          var chartMax = s.max || 0;
+          chartBars.forEach(function(b){ if (b.value > chartMax) chartMax = b.value; });
+          if (chartMax <= 0) chartMax = 1;
+          var chartHtml = chartBars.map(function(b, bi){
+            var pct = Math.round((b.value / chartMax) * 100);
+            return '<div class="bar-item" data-bar="'+bi+'" data-val="'+b.value+'" data-suffix="'+esc(b.suffix)+'" data-pct="'+pct+'">'
+              + '<div class="bar-track"><div class="bar-fill"></div></div>'
+              + '<div class="bar-val">0</div>'
+              + '<div class="bar-label">'+esc(b.label)+'</div>'
+              + '</div>';
+          }).join("");
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">CHART</span><h2>'+esc(s.title||"数据对比")+'</h2></div>'
+            +     '<div class="chart-card">'
+            +       '<div class="chart-bars">'+chartHtml+'</div>'
+            +     '</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "counter") {
+          // Big animated metric counter — the number rolls up to its target.
+          var cVal = parseFloat(s.value)||0;
+          var cSuffix = s.suffix||"";
+          var cPrefix = s.prefix||"";
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">METRIC</span><h2>'+esc(s.title||"关键指标")+'</h2></div>'
+            +     '<div class="counter-card">'
+            +       '<div class="counter-eyebrow">'+esc(s.eyebrow||"")+'</div>'
+            +       '<div class="counter-num" data-val="'+cVal+'" data-prefix="'+esc(cPrefix)+'" data-suffix="'+esc(cSuffix)+'">'+esc(cPrefix)+'0'+esc(cSuffix)+'</div>'
+            +       (s.delta ? '<div class="counter-delta">'+esc(s.delta)+'</div>' : '')
+            +       '<div class="counter-label">'+esc(s.label||"")+'</div>'
+            +       (s.note ? '<div class="counter-note">'+esc(s.note)+'</div>' : '')
+            +     '</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "cards") {
+          // 3D card spread — stacked cards fan out to reveal feature/matrix items.
+          var cardItems = (s.cards||[]).map(function(cd, ci){
+            return '<div class="spread-card" data-card="'+ci+'">'
+              + '<div class="sc-no">'+esc(cd.no||String(ci+1).padStart(2,"0"))+'</div>'
+              + '<div class="sc-title">'+esc(cd.title||"")+'</div>'
+              + '<div class="sc-body">'+esc(cd.body||"")+'</div>'
+              + '</div>';
+          }).join("");
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">MATRIX</span><h2>'+esc(s.title||"能力矩阵")+'</h2></div>'
+            +     '<div class="spread">'+cardItems+'</div>'
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "steps") {
+          // Process / flow — nodes connected by a line that draws in, each node pulses.
+          var stepItems = (s.steps||[]).map(function(st, si){
+            return '<div class="step" data-step="'+si+'">'
+              + '<div class="step-node"><span>'+esc(st.no||String(si+1))+'</span></div>'
+              + '<div class="step-title">'+esc(st.title||"")+'</div>'
+              + '<div class="step-body">'+esc(st.body||"")+'</div>'
+              + '</div>';
+          }).join("");
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   LOCKUP
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">FLOW</span><h2>'+esc(s.title||"流程拆解")+'</h2></div>'
+            +     '<div class="steps">'+stepItems+'</div>'
             +   '</div>'
             + '</section>';
         }
@@ -380,6 +481,52 @@
           tl.fromTo(el.querySelectorAll(".tbl thead tr"), { autoAlpha:0 }, { autoAlpha:1, duration:0.4 }, start+0.45);
           tl.fromTo(el.querySelectorAll(".tbl tbody tr"), { x:-14, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.45, ease:"power2.out", stagger:0.09 }, start+0.55);
         }
+        // chart — bars grow up + value counters roll (deterministic GSAP)
+        if (el.querySelector(".chart-card")) {
+          tl.fromTo(el.querySelector(".chart-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          el.querySelectorAll(".bar-item").forEach(function(item, bi){
+            var target = parseFloat(item.getAttribute("data-val"))||0;
+            var suffix = item.getAttribute("data-suffix")||"";
+            var fill = item.querySelector(".bar-fill");
+            var valEl = item.querySelector(".bar-val");
+            var counter = { v: 0 };
+            tl.fromTo(fill, { scaleY:0, transformOrigin:"bottom" }, { scaleY:1, duration:0.7, ease:"power3.out" }, start+0.5+bi*0.12);
+            tl.to(counter, { v: target, duration:0.7, ease:"power1.out",
+              onUpdate: function(){ valEl.textContent = Math.round(counter.v)+suffix; } }, start+0.5+bi*0.12);
+          });
+        }
+        // counter — the big number rolls up to its target
+        if (el.querySelector(".counter-num")) {
+          var cEl = el.querySelector(".counter-num");
+          var cTarget = parseFloat(cEl.getAttribute("data-val"))||0;
+          var cPrefix = cEl.getAttribute("data-prefix")||"";
+          var cSuffix = cEl.getAttribute("data-suffix")||"";
+          var cCounter = { v: 0 };
+          tl.fromTo(el.querySelector(".counter-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          tl.fromTo(el.querySelector(".counter-eyebrow"), { x:-14, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power2.out" }, start+0.4);
+          tl.to(cCounter, { v: cTarget, duration:1.1, ease:"power2.out",
+            onUpdate: function(){ cEl.textContent = cPrefix + Math.round(cCounter.v) + cSuffix; } }, start+0.5);
+          tl.fromTo(el.querySelectorAll(".counter-delta, .counter-label, .counter-note"), { y:14, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.5, ease:"power2.out", stagger:0.1 }, start+0.9);
+        }
+        // cards — 3D spread: stacked cards fan out with rotation + depth
+        if (el.querySelector(".spread")) {
+          var nCards = el.querySelectorAll(".spread-card").length;
+          el.querySelectorAll(".spread-card").forEach(function(cd, ci){
+            var rot = (ci - (nCards-1)/2) * 6;
+            var yOff = Math.abs(ci - (nCards-1)/2) * 10;
+            tl.fromTo(cd, { y:40+yOff, rotation:0, autoAlpha:0, transformOrigin:"center bottom" },
+              { y:0, rotation:rot, autoAlpha:1, duration:0.6, ease:"back.out(1.6)" }, start+0.35+ci*0.12);
+          });
+        }
+        // steps — connecting line draws in, nodes pulse in sequence
+        if (el.querySelector(".steps")) {
+          tl.fromTo(el.querySelector(".steps"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          el.querySelectorAll(".step").forEach(function(st, si){
+            tl.fromTo(st.querySelector(".step-node"), { scale:0, autoAlpha:0, transformOrigin:"center" },
+              { scale:1, autoAlpha:1, duration:0.5, ease:"back.out(2)" }, start+0.45+si*0.18);
+            tl.fromTo(st.querySelectorAll(".step-title, .step-body"), { y:12, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.45, ease:"power2.out" }, start+0.6+si*0.18);
+          });
+        }
         tl.to(el, { autoAlpha:0, duration:0.4, ease:"power2.inOut" }, end-0.35);
         tl.add(function(){ el.classList.remove("on"); }, end);
       });
@@ -393,6 +540,44 @@
         tl.to(cap, { autoAlpha:1, duration:0.18, ease:"power3.out" }, cs + 0.04);
         tl.to(cap, { autoAlpha:0, duration:0.16 }, ce - 0.10);
       });
+
+      /* ── L0 Atmosphere (deterministic Canvas 2D) ──
+         A fixed, seeded particle field + breathing radial glow. Redrawn on
+         every GSAP timeline seek via onUpdate, so Hyperframes can render any
+         exact frame. No Date.now()/requestAnimationFrame — fully deterministic. */
+      (function buildAtmo(){
+        var cv = document.getElementById("atmo");
+        if (!cv || !cv.getContext) return;
+        var ctx = cv.getContext("2d");
+        var W = 1920, H = 1080;
+        var seed = 20260817; // fixed seed → identical field every render
+        function rnd(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+        var parts = [];
+        for (var i = 0; i < 60; i++) {
+          parts.push({ x: rnd()*W, y: rnd()*H, r: 1.5 + rnd()*2.5, ph: rnd()*Math.PI*2, sp: 0.4 + rnd()*0.8 });
+        }
+        function draw(t){
+          ctx.clearRect(0, 0, W, H);
+          var glow = 0.5 + 0.5*Math.sin(t*0.6);
+          var g = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, W*0.6);
+          g.addColorStop(0, "rgba(10,114,239,"+(0.05+0.03*glow).toFixed(3)+")");
+          g.addColorStop(1, "rgba(10,114,239,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+          for (var i = 0; i < parts.length; i++) {
+            var p = parts[i];
+            var px = p.x + Math.sin(t*p.sp + p.ph) * 14;
+            var py = p.y + Math.cos(t*p.sp*0.8 + p.ph) * 10;
+            var a = 0.10 + 0.10 * (0.5 + 0.5*Math.sin(t*1.2 + p.ph));
+            ctx.beginPath();
+            ctx.arc(px, py, p.r, 0, Math.PI*2);
+            ctx.fillStyle = "rgba(10,114,239,"+a.toFixed(3)+")";
+            ctx.fill();
+          }
+        }
+        draw(0); // static poster frame still has atmosphere
+        tl.eventCallback("onUpdate", function(){ draw(tl.time()); });
+      })();
 
       tl.to("#master", { autoAlpha:0, duration:0.5, ease:"power2.inOut" }, parseFloat("{{DURATION}}")-0.5);
       window.__timelines["master"] = tl;
@@ -439,6 +624,8 @@
       .slide .eyebrow { font-family:"JetBrains Mono",monospace; font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:28px; display:flex; align-items:center; gap:14px; }
       .slide .eyebrow::before { content:""; width:28px; height:2px; background:var(--accent); }
       .slide .statement { font-size:60px; font-weight:700; line-height:1.22; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
+      /* kinetic typography highlight (L3) — `**keyword**` in copy */
+      .kt-hl { color:var(--accent-text); background:var(--accent-soft); border-bottom:2px solid var(--accent); padding:0 2px; border-radius:2px; }
       .slide .support { margin-top:30px; font-size:26px; font-weight:400; color:var(--ink-300); line-height:1.45; max-width:1200px; font-family:"JetBrains Mono",monospace; letter-spacing:.02em; }
       .slide .bullets { list-style:none; margin-top:34px; display:grid; gap:16px; max-width:1240px; }
       .slide .bullets li { display:flex; align-items:baseline; gap:16px; font-size:25px; line-height:1.42; color:var(--ink-200); }
@@ -474,6 +661,35 @@
       .slide .tbl tbody td.num { font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--accent-text); text-align:right; letter-spacing:.01em; }
       .slide .tbl tbody tr:nth-child(even) { background:rgba(23,23,23,0.018); }
       .slide .tbl tbody tr:last-child td { border-bottom:none; }
+      /* chart — dither-style bar chart (bars grow + counters roll) */
+      .slide .chart-card { flex:1; min-height:0; background:var(--surface); box-shadow:var(--shadow-rest); border-radius:2px; padding:34px 40px; display:flex; flex-direction:column; }
+      .slide .chart-bars { flex:1; min-height:0; display:flex; align-items:flex-end; gap:44px; padding-top:20px; }
+      .slide .bar-item { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:12px; height:100%; }
+      .slide .bar-track { flex:1; width:100%; max-width:120px; display:flex; align-items:flex-end; background:rgba(23,23,23,0.03); border-radius:2px; overflow:hidden; }
+      .slide .bar-fill { width:100%; height:100%; background:linear-gradient(180deg, var(--accent), var(--accent-text)); border-radius:2px; transform:scaleY(0); transform-origin:bottom; }
+      .slide .bar-val { font-family:"JetBrains Mono",monospace; font-size:30px; font-weight:700; color:var(--accent-text); letter-spacing:-.01em; }
+      .slide .bar-label { font-size:20px; font-weight:600; color:var(--ink-200); text-align:center; line-height:1.3; }
+      /* counter — big animated metric */
+      .slide .counter-card { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; }
+      .slide .counter-eyebrow { font-family:"JetBrains Mono",monospace; font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); }
+      .slide .counter-num { font-family:"JetBrains Mono",monospace; font-size:150px; font-weight:700; line-height:1; color:var(--accent-text); letter-spacing:-.03em; }
+      .slide .counter-delta { font-family:"JetBrains Mono",monospace; font-size:30px; font-weight:700; color:var(--ink); background:var(--accent-soft); border:1px solid var(--accent-hair); border-radius:2px; padding:8px 18px; }
+      .slide .counter-label { font-size:34px; font-weight:700; color:var(--ink); }
+      .slide .counter-note { font-size:22px; color:var(--ink-300); max-width:1100px; line-height:1.5; }
+      /* cards — 3D spread (stacked cards fan out) */
+      .slide .spread { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; gap:34px; perspective:1200px; }
+      .slide .spread-card { width:340px; min-height:360px; background:var(--surface); box-shadow:var(--shadow-elev); border-radius:2px; padding:34px 30px; display:flex; flex-direction:column; gap:16px; border-top:3px solid var(--accent); }
+      .slide .spread-card .sc-no { font-family:"JetBrains Mono",monospace; font-size:40px; font-weight:700; color:var(--accent-text); line-height:1; }
+      .slide .spread-card .sc-title { font-size:28px; font-weight:700; color:var(--ink); letter-spacing:-.01em; }
+      .slide .spread-card .sc-body { font-size:20px; color:var(--ink-200); line-height:1.5; }
+      /* steps — process flow with connecting line + pulsing nodes */
+      .slide .steps { flex:1; min-height:0; display:flex; align-items:center; justify-content:space-between; gap:20px; position:relative; }
+      .slide .steps::before { content:""; position:absolute; left:8%; right:8%; top:44px; height:2px; background:var(--line-strong); }
+      .slide .step { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; position:relative; z-index:1; }
+      .slide .step-node { width:88px; height:88px; border-radius:50%; background:var(--surface); border:3px solid var(--accent); box-shadow:var(--shadow-rest); display:flex; align-items:center; justify-content:center; }
+      .slide .step-node span { font-family:"JetBrains Mono",monospace; font-size:34px; font-weight:700; color:var(--accent-text); }
+      .slide .step-title { font-size:26px; font-weight:700; color:var(--ink); }
+      .slide .step-body { font-size:19px; color:var(--ink-200); line-height:1.45; max-width:300px; }
       /* cute flat illustration chip (brand blue line art, accent-soft chip) */
       .slide .illust { position:absolute; top:11%; right:7%; width:150px; height:150px; z-index:5;
         display:flex; align-items:center; justify-content:center;

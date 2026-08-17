@@ -81,7 +81,7 @@ component templates consume. Visual fidelity is guaranteed by the templates
 ## Slide component types (must be one of these)
 
 Every slide may also carry these **anti-AI-flavor** fields:
-- `icon` — a key from the fixed cute-illustration catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake`). The template owns the SVG art; you only pick a topic-matching key. Unknown keys fall back to `spark`.
+- `icon` — a key from the fixed cute-illustration catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake/trend/gauge/layers/flow`). The template owns the SVG art; you only pick a topic-matching key. Unknown keys fall back to `spark`.
 - `analysis` — 1–2 sentence so-what line, rendered as a distinct "分析 / SO-WHAT" chip under the bullets. Must be a *specific* inference tied to that chapter's numbers, never a generic slogan.
 - `callback` — string or array of short strings linking this chapter to another, rendered as small `↳` tags (the visible information-connection layer). Example: `"呼应开头:零售 -0.6% 的宏观压力"`.
 
@@ -90,7 +90,36 @@ Every slide may also carry these **anti-AI-flavor** fields:
 | `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `icon`/`analysis`/`callback`, optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | inline in `dashboard.html` (keypoint branch) |
 | `three_points` | `points[3]` each `{ no, title, body }`, optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (three_points branch) |
 | `table` | `head[≥2]` (string column headers), `rows[]` (each row must have the same cell count as `head`), optional `numCols` (array of 0-based column indices rendered right-aligned in mono blue), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (table branch) |
+| `chart` | `bars[]` each `{ label, value, suffix? }` (2–6 bars), optional `max` (y-axis ceiling; auto-computed if omitted), optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (chart branch) |
+| `counter` | `value` (number), `label` (string), optional `prefix`/`suffix`, optional `delta` (e.g. `"+300%"`), optional `eyebrow`, optional `note`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (counter branch) |
+| `cards` | `cards[]` each `{ no?, title, body }` (2–4 cards), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (cards branch) |
+| `steps` | `steps[]` each `{ no?, title, body }` (2–5 steps), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (steps branch) |
 | `outro` | `recap` (string), optional `signoff`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (outro branch) |
+
+### Semantic-to-visual mapping (the 4-layer visual stack)
+
+Pick the slide type that matches the *semantic* of the copy, not the template name.
+This is the core anti-"PPT" rule — a metric should render as a **chart/counter**, a
+feature matrix as **cards**, a process as **steps**, never as plain text:
+
+| Copy semantics | Preferred slide type | Visual treatment |
+|----------------|---------------------|------------------|
+| Growth / metric ("效率提升 10 倍", "收入达 $5M") | `counter` or `chart` | number rolls up + bars grow (L2) over the breathing atmosphere (L0) |
+| Comparison / ranking ("A 是 B 的 3 倍") | `chart` | animated dither bars + value counters |
+| Feature / capability matrix ("支持三大平台") | `cards` | 3D card spread fans out |
+| Process / architecture ("输入 → 分析 → 输出") | `steps` | connecting line draws in, nodes pulse |
+| Breakthrough / pain-point flip ("毫秒级响应") | `keypoint` + `**keyword**` | kinetic typography highlight (L3) |
+| Thesis / one-line conclusion | `keypoint` | statement + bullets + analysis chip |
+
+**Kinetic typography (L3):** wrap the word that carries the semantic weight in
+`**double asterisks**` inside any `statement` / `bullets` / `support` / `analysis`
+string. The template renders it as a highlighted accent span (brand-blue underline
++ soft chip). Use it sparingly — one or two keywords per slide, never whole lines.
+
+**Icon keys** (extended catalog): `shield/rocket/chart/coins/cube/atom/bolt/net/
+lock/spark/pick/scale/bot/bank/handshake/trend/gauge/layers/flow`. Match the topic:
+growth → `trend`/`gauge`, matrix → `layers`, process → `flow`, miner → `pick`,
+macro → `chart`, post-quantum → `atom`. Unknown keys fall back to `spark`.
 
 ### Keeping the center zone in sync with the narration
 
@@ -121,8 +150,16 @@ credibly than prose and keeps the screen's static document zone information-dens
   Natural back-and-forth, not a monologue split in half.
 - Female inserts a real question/reaction every 2–3 male lines.
 - Keep emotion/price-panic out; favor mechanism, logic chains, deeper causes.
-- Total `text` length ≈ `target_seconds` at ~3.0–3.4 chars/sec (zh),
-  ~2.2–2.5 words/sec (en). For an ~11 min video target ≈ 2000–2400 zh chars.
+- **Length gate (hard rule — do not under-fill).** Edge TTS speaks zh at
+  **~5.3–5.7 chars/sec** (measured), NOT the old 3.0–3.4 estimate. Author the
+  dialogue to the **real** rate so the video actually reaches `target_seconds`:
+  - zh: `total_chars ≈ target_seconds × 5.5`. For an **11 min (660s)** video
+    write **≥ 3600 zh chars**; for 12 min (720s) write **≥ 3900 zh chars**.
+    A 2000–2400-char script only yields ~6–7 min — that is a failed gate.
+  - en: `total_words ≈ target_seconds × 2.2`. For 11 min write **≥ 1450 words**.
+  - After `generate_audio.py`, check `speaker_timestamps[_en].json.total` ≥
+    `target_seconds × 0.9`; if short, **expand facts inside existing turns**
+    (never add filler) and re-run until the gate passes.
 
 ### `emotion` — per-turn emotional pacing (anti-AI-flavor)
 

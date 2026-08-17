@@ -80,13 +80,14 @@ def _validate_ticker(ticker, key: str, errors: list[str]) -> None:
             errors.append(f"{key}[{i}] must be {{label, value?, change?, dir?}}")
 
 
-VALID_SLIDE_TYPES = {"keypoint", "three_points", "outro", "table"}
+VALID_SLIDE_TYPES = {"keypoint", "three_points", "outro", "table", "chart", "counter", "cards", "steps"}
 
 # Fixed cute-illustration catalog (must match `ICONS` in dashboard.html /
 # shorts.html). The LLM picks a key; unknown keys fall back to "spark".
 VALID_ICONS = {
     "shield", "rocket", "chart", "coins", "cube", "atom", "bolt",
     "net", "lock", "spark", "pick", "scale", "bot", "bank", "handshake",
+    "trend", "gauge", "layers", "flow",
 }
 
 # Emotional pacing catalog (must match `EMOTION_RATE` in generate_audio.py).
@@ -147,6 +148,35 @@ def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> N
                 for j, r in enumerate(rows):
                     if not isinstance(r, list) or (ncols and len(r) != ncols):
                         errors.append(f"{key}[{i}].rows[{j}] must have {ncols} cells matching head")
+        elif stype == "chart":
+            bars = s.get("bars")
+            if not isinstance(bars, list) or not bars:
+                errors.append(f"{key}[{i}].bars must be a non-empty array for chart slides")
+            else:
+                for j, b in enumerate(bars):
+                    if not isinstance(b, dict) or not b.get("label") or b.get("value") is None:
+                        errors.append(f"{key}[{i}].bars[{j}] needs label + value")
+        elif stype == "counter":
+            if s.get("value") is None:
+                errors.append(f"{key}[{i}].value is required for counter slides")
+            if not s.get("label"):
+                errors.append(f"{key}[{i}].label is required for counter slides")
+        elif stype == "cards":
+            cards = s.get("cards")
+            if not isinstance(cards, list) or not cards:
+                errors.append(f"{key}[{i}].cards must be a non-empty array for cards slides")
+            else:
+                for j, cd in enumerate(cards):
+                    if not isinstance(cd, dict) or not cd.get("title") or not cd.get("body"):
+                        errors.append(f"{key}[{i}].cards[{j}] needs title + body")
+        elif stype == "steps":
+            steps = s.get("steps")
+            if not isinstance(steps, list) or not steps:
+                errors.append(f"{key}[{i}].steps must be a non-empty array for steps slides")
+            else:
+                for j, st in enumerate(steps):
+                    if not isinstance(st, dict) or not st.get("title") or not st.get("body"):
+                        errors.append(f"{key}[{i}].steps[{j}] needs title + body")
         elif stype == "outro":
             if not s.get("recap"):
                 errors.append(f"{key}[{i}].recap is required for outro slides")
