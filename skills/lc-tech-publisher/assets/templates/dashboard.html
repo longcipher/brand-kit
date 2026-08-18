@@ -29,8 +29,17 @@
       [data-composition-id] { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
 
       #bg-grid { position: absolute; inset: 0; z-index: 0; }
-      .scanline { position: absolute; left: 0; right: 0; height: 1px; z-index: 2; pointer-events: none;
-        background: linear-gradient(90deg, transparent, var(--accent-hair), transparent); opacity: 0; }
+
+      /* L0 atmosphere canvas — deterministic Canvas 2D (ambient grid pulse +
+         particle field + drifting glow blobs). Redrawn on every GSAP timeline
+         seek via onUpdate reading tl.time() — no Date.now()/requestAnimationFrame. */
+      #atmo { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+      /* scene-switch beam — a vertical brand-blue gradient bar that sweeps
+         left→right once at each slide transition (CanvasUI "laser scan" feel) */
+      #scanline { position: absolute; top: 0; bottom: 0; width: 160px; left: 0; z-index: 2;
+        pointer-events: none; opacity: 0;
+        background: linear-gradient(90deg, transparent, var(--accent-hair), var(--accent-soft), var(--accent-hair), transparent); }
 
       /* playful background decorations — tiny brand-blue glyphs at the frame
          edges, below the slides so they never fight the content */
@@ -38,16 +47,25 @@
       #bg-deco .deco { position: absolute; will-change: transform; }
       #bg-deco .deco svg { width: 100%; height: 100%; display: block; }
 
-      /* L0 atmosphere canvas — sits above the grid/deco, below the slides */
-      #atmo { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-
-      /* mascot — cute robot, bottom-right. z-index 4 keeps it in the background
-         layer (under the slides) so it never covers content; the slides have a
-         transparent background, so it stays visible as a quiet companion. */
-      #mascot { position: absolute; right: 3.5%; bottom: 4%; width: 120px; height: 120px; z-index: 4;
-        pointer-events: none; filter: drop-shadow(0 6px 12px rgba(23,23,23,0.08)); }
-      #mascot svg { width: 100%; height: 100%; display: block; }
-      #mascot .mascot-eyes { transform-box: fill-box; transform-origin: center; }
+      /* Layer 1 — persistent brand header: lockup + date/kicker + timeline
+         progress bar. Shown on content slides (hidden during the cover, which
+         carries its own lockup). */
+      #header { position: absolute; top: 0; left: 0; right: 0; height: 96px; z-index: 6;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 6%; pointer-events: none; opacity: 0; visibility: hidden; }
+      #header .hd-lockup { display: flex; align-items: center; gap: 12px; }
+      #header .hd-lockup img { width: 30px; height: 30px; }
+      #header .hd-lockup span { font-family:"DM Sans",sans-serif; font-size: 17px; font-weight: 700;
+        color: var(--ink-300); letter-spacing: -0.02em; }
+      #header .hd-meta { display: flex; align-items: center; gap: 18px;
+        font-family:"JetBrains Mono",monospace; font-size: 15px; letter-spacing: .1em;
+        text-transform: uppercase; color: var(--ink-400); }
+      #header .hd-meta .hd-date { color: var(--accent-text); font-weight: 700; }
+      #header .hd-progress { position: absolute; left: 6%; right: 6%; bottom: 0; height: 2px;
+        background: var(--line); }
+      #header .hd-progress .hd-progress-fill { height: 100%; width: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-text));
+        transform: scaleX(0); transform-origin: left; }
 
       #stage { position: absolute; inset: 0; z-index: 5; }
 
@@ -81,34 +99,23 @@
         </defs>
         <rect width="1920" height="1080" fill="url(#grid-pat)"/>
       </svg>
+
+      <!-- L0 atmosphere: deterministic Canvas 2D layer (ambient grid pulse +
+           particle field + drifting glow blobs). Redrawn on every GSAP timeline
+           seek via onUpdate — no Date.now()/requestAnimationFrame. -->
+      <canvas id="atmo" width="1920" height="1080"></canvas>
+
+      <!-- scene-switch beam (CanvasUI laser-scan transition) -->
       <div class="scanline" id="scanline"></div>
 
       <!-- playful background decorations (fixed hand-built set, animated by GSAP) -->
       <div id="bg-deco"></div>
 
-      <!-- L0 atmosphere: deterministic Canvas 2D layer (dither particles + grid
-           pulse). Redrawn on every GSAP timeline seek via onUpdate — no
-           Date.now()/requestAnimationFrame, so Hyperframes can seek any frame. -->
-      <canvas id="atmo" width="1920" height="1080"></canvas>
-
-      <!-- mascot: a cute little robot that floats, blinks and waves through the show -->
-      <div id="mascot" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="8" aria-hidden="true">
-        <svg id="mascot-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-          <line x1="80" y1="44" x2="80" y2="26" stroke="#0a72ef" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="80" cy="19" r="8" fill="#0a72ef"/>
-          <circle cx="80" cy="90" r="52" fill="rgba(10,114,239,0.10)" stroke="#0a72ef" stroke-width="4"/>
-          <g class="mascot-eyes">
-            <circle cx="63" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
-            <circle cx="66" cy="84" r="5.5" fill="#0a63d0"/>
-            <circle cx="97" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
-            <circle cx="94" cy="84" r="5.5" fill="#0a63d0"/>
-          </g>
-          <path d="M72 108 Q80 116 88 108" fill="none" stroke="#0a63d0" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="50" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
-          <circle cx="110" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
-          <circle cx="66" cy="142" r="7" fill="#0a72ef"/>
-          <circle cx="94" cy="142" r="7" fill="#0a72ef"/>
-        </svg>
+      <!-- Layer 1 — persistent brand header (lockup + date + progress bar) -->
+      <div id="header" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="7" aria-hidden="true">
+        <div class="hd-lockup"><img src="logos/lc.svg" alt=""><span>LongCipher</span></div>
+        <div class="hd-meta"><span class="hd-date"></span><span class="hd-kicker"></span></div>
+        <div class="hd-progress"><div class="hd-progress-fill"></div></div>
       </div>
 
       <div id="stage" data-layout-allow-overlap><!-- slides injected by build_composition.py --></div>
@@ -141,6 +148,158 @@
         return ICONS[name] || ICONS.spark;
       }
 
+      /* ── Content-aware visualizer builders (Layer 2) ──
+         Each returns HTML for the right-column dynamic visual card. The LLM
+         only supplies structured data via the `visual` field; the template owns
+         all markup + animation. All motion is GSAP-driven (deterministic). */
+
+      /* metric_chart — animated SVG line chart (prices / TVL / mining balances).
+         The polyline draws in left→right, the area fades in, data dots pop, and
+         the latest point carries a breathing halo. */
+      function metricChartHTML(d){
+        var pts = (d.points||[]).map(function(v){ return parseFloat(v)||0; });
+        var labels = d.labels||[];
+        var unit = d.unit||"";
+        var max = d.max||0;
+        pts.forEach(function(v){ if (v > max) max = v; });
+        if (max <= 0) max = 1;
+        var W = 560, H = 300, pad = 34;
+        var n = Math.max(pts.length, 2);
+        var stepX = (W - 2*pad) / (n - 1);
+        var coords = pts.map(function(v, i){
+          return [ pad + i*stepX, H - pad - (v/max)*(H - 2*pad) ];
+        });
+        var line = coords.map(function(c){ return c[0].toFixed(1)+","+c[1].toFixed(1); }).join(" ");
+        var area = pad+","+(H-pad)+" "+line+" "+(W-pad)+","+(H-pad);
+        var dots = coords.map(function(c, i){
+          return '<circle class="mc-dot" data-dot="'+i+'" cx="'+c[0].toFixed(1)+'" cy="'+c[1].toFixed(1)+'" r="5" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>'
+            + (i === coords.length-1 ? '<circle class="mc-halo" data-halo="1" cx="'+c[0].toFixed(1)+'" cy="'+c[1].toFixed(1)+'" r="12" fill="none" stroke="rgba(10,114,239,0.35)" stroke-width="2"/>' : '');
+        }).join("");
+        var xlabels = labels.map(function(l, i){
+          return '<text class="mc-xlabel" x="'+coords[i][0].toFixed(1)+'" y="'+(H-pad+26)+'" text-anchor="middle">'+esc(l)+'</text>';
+        }).join("");
+        var vlabels = coords.map(function(c, i){
+          return '<text class="mc-vlabel" data-vlabel="'+i+'" x="'+c[0].toFixed(1)+'" y="'+(c[1]-14).toFixed(1)+'" text-anchor="middle">0</text>';
+        }).join("");
+        return '<div class="viz-card mc-card" data-pts="'+pts.join(",")+'">'
+          + '<div class="viz-head"><span class="viz-tag">CHART</span><span class="viz-title">'+esc(d.title||"")+'</span><span class="viz-unit">'+esc(unit)+'</span></div>'
+          + '<svg class="mc-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet">'
+          +   '<defs><linearGradient id="mc-fill" x1="0" y1="0" x2="0" y2="1">'
+          +     '<stop offset="0" stop-color="rgba(10,114,239,0.18)"/><stop offset="1" stop-color="rgba(10,114,239,0)"/></linearGradient></defs>'
+          +   '<polygon class="mc-area" points="'+area+'" fill="url(#mc-fill)"/>'
+          +   '<polyline class="mc-line" points="'+line+'" fill="none" stroke="#0a72ef" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
+          +   dots + xlabels + vlabels
+          + '</svg>'
+          + '</div>';
+      }
+
+      /* pipeline — animated node/data-flow diagram (infra / MEV / protocol).
+         Nodes light up in sequence; a data packet pulses along each link. */
+      function pipelineHTML(d){
+        var nodes = d.nodes||[];
+        var links = d.links||[]; // optional explicit link labels
+        var out = '<div class="viz-card pipe-card">'
+          + '<div class="viz-head"><span class="viz-tag">FLOW</span><span class="viz-title">'+esc(d.title||"")+'</span></div>'
+          + '<div class="pipe">';
+        nodes.forEach(function(nd, i){
+          out += '<div class="pipe-node" data-pipe="'+i+'">'
+            + '<div class="pn-ring"><span class="pn-idx">'+String(i+1).padStart(2,"0")+'</span></div>'
+            + '<div class="pn-label">'+esc(nd)+'</div>'
+            + '</div>';
+          if (i < nodes.length-1) {
+            out += '<div class="pipe-link" data-link="'+i+'">'
+              + '<div class="pl-line"></div>'
+              + '<span class="pl-packet"></span>'
+              + (links && links[i] ? '<span class="pl-label">'+esc(links[i])+'</span>' : '')
+              + '</div>';
+          }
+        });
+        out += '</div></div>';
+        return out;
+      }
+
+      /* benchmark — live comparison bars (AI tok/s, TPS). Horizontal bars fill
+         left→right with count-up values. */
+      function benchmarkHTML(d){
+        var bars = (d.bars||[]).map(function(b){
+          return { label: b.label||"", value: parseFloat(b.value)||0, suffix: b.suffix||"" };
+        });
+        var max = d.max||0;
+        bars.forEach(function(b){ if (b.value > max) max = b.value; });
+        if (max <= 0) max = 1;
+        var items = bars.map(function(b, i){
+          var pct = Math.round((b.value/max)*100);
+          return '<div class="bm-item" data-bm="'+i+'" data-val="'+b.value+'" data-suffix="'+esc(b.suffix)+'" data-pct="'+pct+'">'
+            + '<div class="bm-label">'+esc(b.label)+'</div>'
+            + '<div class="bm-track"><div class="bm-fill"></div></div>'
+            + '<div class="bm-val">0</div>'
+            + '</div>';
+        }).join("");
+        return '<div class="viz-card bm-card">'
+          + '<div class="viz-head"><span class="viz-tag">BENCH</span><span class="viz-title">'+esc(d.title||"")+'</span><span class="viz-unit">'+esc(d.unit||"")+'</span></div>'
+          + '<div class="bm-list">'+items+'</div>'
+          + '</div>';
+      }
+
+      /* security — pulsing CVSS gauge + port vulnerability warning card. */
+      function securityHTML(d){
+        var cvss = parseFloat(d.cvss)||0;
+        var sev = cvss >= 9 ? "CRITICAL" : (cvss >= 7 ? "HIGH" : (cvss >= 4 ? "MEDIUM" : "LOW"));
+        var ports = d.ports||[];
+        var portChips = ports.map(function(p){ return '<span class="sec-port">'+esc(p)+'</span>'; }).join("");
+        // semicircle gauge: needle angle 180°→0° mapped from 0→10
+        var ang = 180 - (cvss/10)*180;
+        return '<div class="viz-card sec-card">'
+          + '<div class="viz-head"><span class="viz-tag">ALERT</span><span class="viz-title">'+esc(d.title||"")+'</span></div>'
+          + '<div class="sec-body">'
+          +   '<div class="sec-gauge">'
+          +     '<svg class="sec-svg" viewBox="0 0 200 120">'
+          +       '<path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgba(23,23,23,0.08)" stroke-width="14" stroke-linecap="round"/>'
+          +       '<path class="sec-arc" d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="#0a72ef" stroke-width="14" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251"/>'
+          +       '<g class="sec-needle" style="transform-origin:100px 110px">'
+          +         '<line x1="100" y1="110" x2="100" y2="40" stroke="#0a63d0" stroke-width="4" stroke-linecap="round"/>'
+          +         '<circle cx="100" cy="110" r="6" fill="#0a72ef"/>'
+          +       '</g>'
+          +     '</svg>'
+          +     '<div class="sec-score"><span class="sec-num" data-cvss="'+cvss+'">0.0</span><span class="sec-sev">'+sev+'</span></div>'
+          +   '</div>'
+          +   '<div class="sec-side">'
+          +     '<div class="sec-pulse"><span class="sec-pulse-dot"></span><span class="sec-pulse-txt">'+esc(d.pulse||"高危扩散")+'</span></div>'
+          +     (portChips ? '<div class="sec-ports"><span class="sec-ports-label">PORTS</span><div class="sec-ports-list">'+portChips+'</div></div>' : '')
+          +     (d.note ? '<div class="sec-note">'+esc(d.note)+'</div>' : '')
+          +   '</div>'
+          + '</div>'
+          + '</div>';
+      }
+
+      /* terminal — syntax-flavored animated code block (Rust / smart-contract
+         releases). Lines type in with a mono caret. */
+      function terminalHTML(d){
+        var lines = d.lines||[];
+        var items = lines.map(function(l, i){
+          var cls = "term-line";
+          if (l.indexOf("$") === 0) cls += " term-cmd";
+          else if (l.indexOf(">") === 0) cls += " term-out";
+          return '<div class="'+cls+'" data-term="'+i+'">'+esc(l)+'</div>';
+        }).join("");
+        return '<div class="viz-card term-card">'
+          + '<div class="term-bar"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span><span class="term-title">'+esc(d.title||"terminal")+'</span></div>'
+          + '<div class="term-body">'+items+'<span class="term-caret"></span></div>'
+          + '</div>';
+      }
+
+      /* Route a slide's `visual` field to its builder. Returns "" if none. */
+      function visualHTML(s){
+        var v = s.visual;
+        if (!v) return "";
+        if (v === "metric_chart") return metricChartHTML(s.chart||{});
+        if (v === "pipeline") return pipelineHTML(s.pipeline||{});
+        if (v === "benchmark") return benchmarkHTML(s.benchmark||{});
+        if (v === "security") return securityHTML(s.security||{});
+        if (v === "terminal") return terminalHTML(s.terminal||{});
+        return "";
+      }
+
       /* ── Build slides ── */
       var slides = DATA.slides || [];
       var html = "";
@@ -169,6 +328,8 @@
         var sStart = s._start != null ? s._start : 0;
         var sEnd   = s._end   != null ? s._end   : sStart + 8;
         var sAttrs = ' data-start="'+sStart+'" data-end="'+sEnd+'"';
+        var visual = visualHTML(s);
+        var hasVisual = visual ? " has-visual" : "";
         if (s.type === "keypoint") {
           var bullets = (s.bullets||[]).map(function(b){
             return '<li><span class="b-dot"></span><span class="b-txt">'+escHl(b)+'</span></li>';
@@ -177,8 +338,7 @@
             return '<span class="cb-tag"><span class="cb-arrow">↳</span><span class="cb-txt">'+esc(cb)+'</span></span>';
           }).join("");
           html += ''
-            + '<section class="slide'+(s.icon?' has-illust':'')+'" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
+            + '<section class="slide'+(s.icon?' has-illust':'')+hasVisual+'" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
             +   '<div class="accent-rule"></div>'
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="stage">'
@@ -189,6 +349,7 @@
             +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+escHl(s.analysis)+'</span></div>' : '')
             +     (callbacks ? '<div class="callbacks">'+callbacks+'</div>' : '')
             +   '</div>'
+            +   (visual ? '<div class="visual" data-visual="'+esc(s.visual)+'">'+visual+'</div>' : '')
             +   '<div class="idx-tag">'+String(n).padStart(2,"0")+' / '+String(slides.length).padStart(2,"0")+'</div>'
             + '</section>';
         } else if (s.type === "three_points") {
@@ -202,7 +363,6 @@
           }).join("");
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">SUMMARY</span><h2>'+esc(s.title||"三点总结")+'</h2></div>'
@@ -212,7 +372,6 @@
         } else if (s.type === "outro") {
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="card">'
             +     '<div class="kicker">WRAP-UP</div>'
@@ -232,7 +391,6 @@
           }).join("");
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">DATA</span><h2>'+esc(s.title||"数据一览")+'</h2></div>'
@@ -260,7 +418,6 @@
           }).join("");
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">CHART</span><h2>'+esc(s.title||"数据对比")+'</h2></div>'
@@ -277,7 +434,6 @@
           var cPrefix = s.prefix||"";
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">METRIC</span><h2>'+esc(s.title||"关键指标")+'</h2></div>'
@@ -302,7 +458,6 @@
           }).join("");
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">MATRIX</span><h2>'+esc(s.title||"能力矩阵")+'</h2></div>'
@@ -320,11 +475,61 @@
           }).join("");
           html += ''
             + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
-            +   LOCKUP
             +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
             +   '<div class="wrap">'
             +     '<div class="head"><span class="tag">FLOW</span><h2>'+esc(s.title||"流程拆解")+'</h2></div>'
             +     '<div class="steps">'+stepItems+'</div>'
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "metric_chart") {
+          // standalone line-chart slide (right-column visualizer as the hero)
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">TREND</span><h2>'+esc(s.title||"趋势")+'</h2></div>'
+            +     '<div class="viz-standalone">'+metricChartHTML(s.chart||{})+'</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "pipeline") {
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">ARCH</span><h2>'+esc(s.title||"架构")+'</h2></div>'
+            +     '<div class="viz-standalone">'+pipelineHTML(s.pipeline||{})+'</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "benchmark") {
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">BENCH</span><h2>'+esc(s.title||"性能对比")+'</h2></div>'
+            +     '<div class="viz-standalone">'+benchmarkHTML(s.benchmark||{})+'</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "security") {
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">SECURITY</span><h2>'+esc(s.title||"安全告警")+'</h2></div>'
+            +     '<div class="viz-standalone">'+securityHTML(s.security||{})+'</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
+            +   '</div>'
+            + '</section>';
+        } else if (s.type === "terminal") {
+          html += ''
+            + '<section class="slide" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
+            +   (s.icon ? '<div class="illust" data-illust="'+esc(s.icon)+'">'+iconSVG(s.icon)+'</div>' : '')
+            +   '<div class="wrap">'
+            +     '<div class="head"><span class="tag">CODE</span><h2>'+esc(s.title||"代码")+'</h2></div>'
+            +     '<div class="viz-standalone">'+terminalHTML(s.terminal||{})+'</div>'
+            +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+esc(s.analysis)+'</span></div>' : '')
             +   '</div>'
             + '</section>';
         }
@@ -354,6 +559,26 @@
       /* ── GSAP timeline ── */
       var tl = gsap.timeline({ paused: true });
       tl.set(".cap", { autoAlpha: 0 }, 0);
+
+      /* ── Persistent header (Layer 1) ──
+         Brand lockup + date/kicker + a timeline progress bar that fills across
+         the whole video. Hidden during the cover (which has its own lockup),
+         revealed when the first content slide begins. */
+      (function buildHeader(){
+        var hd = document.getElementById("header");
+        if (!hd) return;
+        var DUR = parseFloat("{{DURATION}}");
+        var dateEl = hd.querySelector(".hd-date");
+        var kickEl = hd.querySelector(".hd-kicker");
+        if (dateEl) dateEl.textContent = DATA.cover && DATA.cover.metaRight ? DATA.cover.metaRight : "";
+        if (kickEl) kickEl.textContent = DATA.cover && DATA.cover.kicker ? DATA.cover.kicker : "";
+        var firstStart = (slides.length && slides[0]._start != null) ? slides[0]._start : 4.0;
+        tl.set(hd, { autoAlpha: 0 }, 0);
+        tl.to(hd, { autoAlpha: 1, duration: 0.4, ease: "power2.out" }, firstStart);
+        // progress bar fills 0→100% across the whole run (deterministic)
+        tl.fromTo(hd.querySelector(".hd-progress-fill"), { scaleX: 0, transformOrigin: "left" },
+          { scaleX: 1, duration: DUR, ease: "none" }, 0);
+      })();
 
       /* ── Playful background decorations ──
          A fixed, hand-built set of tiny brand-blue glyphs (star, dot, cross,
@@ -397,22 +622,6 @@
         });
       })();
 
-      /* ── Mascot ──
-         The cute robot floats gently the whole show and blinks on a fixed
-         cadence. Finite repeats only (derived from the composition duration). */
-      (function buildMascot(){
-        var m = document.getElementById("mascot");
-        var DUR = parseFloat("{{DURATION}}");
-        var floatCycles = Math.max(4, Math.round(DUR / 4.2));
-        tl.fromTo(m, { y: 0 }, { y: -14, duration: 2.1, ease:"sine.inOut", yoyo:true, repeat:floatCycles }, 0);
-        var blinkCycles = Math.max(4, Math.round(DUR / 5));
-        for (var b = 0; b < blinkCycles; b++) {
-          var at = 1.5 + b * 5;
-          tl.to(".mascot-eyes", { scaleY: 0.08, transformOrigin:"50% 50%", duration:0.08, ease:"power2.in" }, at);
-          tl.to(".mascot-eyes", { scaleY: 1, transformOrigin:"50% 50%", duration:0.12, ease:"power2.out" }, at + 0.09);
-        }
-      })();
-
       // hero / cover — immediateRender:false so GSAP does NOT hide these at
       // creation time (t=0). They stay visible per their CSS default, so a
       // static preview/poster frame shows the full cover; playback re-reveals.
@@ -449,6 +658,10 @@
         tl.add(function(){ el.classList.add("on"); }, start-0.02);
         tl.set(el, { autoAlpha:0 }, start-0.01);
         tl.to(el, { autoAlpha:1, duration:0.5, ease:"power3.out" }, start);
+
+        // CanvasUI laser-scan beam sweeps across at each scene switch
+        tl.fromTo("#scanline", { xPercent:-100, autoAlpha:0 }, { xPercent:0, autoAlpha:1, duration:0.35, ease:"power2.inOut" }, start-0.05);
+        tl.to("#scanline", { xPercent:100, autoAlpha:0, duration:0.35, ease:"power2.inOut" }, start+0.3);
 
         if (el.querySelector(".accent-rule")) {
           tl.fromTo(el.querySelector(".accent-rule"), { scaleY:0, transformOrigin:"top" }, { scaleY:1, duration:0.6, ease:"power3.out" }, start+0.1);
@@ -527,6 +740,96 @@
             tl.fromTo(st.querySelectorAll(".step-title, .step-body"), { y:12, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.45, ease:"power2.out" }, start+0.6+si*0.18);
           });
         }
+
+        /* ── Content-aware visualizer animations (Layer 2) ── */
+        // metric_chart — line draws in, area fades, dots pop, values count up
+        if (el.querySelector(".mc-card")) {
+          tl.fromTo(el.querySelector(".mc-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          var mcLine = el.querySelector(".mc-line");
+          var mcLen = mcLine ? mcLine.getTotalLength() : 0;
+          if (mcLine) {
+            tl.set(mcLine, { strokeDasharray: mcLen, strokeDashoffset: mcLen }, start+0.4);
+            tl.to(mcLine, { strokeDashoffset: 0, duration: 1.1, ease: "power2.inOut" }, start+0.4);
+          }
+          tl.fromTo(el.querySelector(".mc-area"), { autoAlpha:0 }, { autoAlpha:1, duration:0.8 }, start+0.6);
+          el.querySelectorAll(".mc-dot").forEach(function(dot, di){
+            tl.fromTo(dot, { scale:0, transformOrigin:"center" }, { scale:1, duration:0.4, ease:"back.out(2)" }, start+0.7+di*0.12);
+          });
+          // value labels count up to their point values
+          var mcPts = (el.querySelector(".mc-card").getAttribute("data-pts")||"").split(",").map(parseFloat);
+          el.querySelectorAll(".mc-vlabel").forEach(function(vl, vi){
+            var target = mcPts[vi]||0;
+            var cnt = { v: 0 };
+            tl.to(cnt, { v: target, duration:0.8, ease:"power1.out",
+              onUpdate: function(){ vl.textContent = Math.round(cnt.v); } }, start+0.8+vi*0.1);
+          });
+          // breathing halo on the latest point (finite repeat)
+          var haloCycles = Math.max(2, Math.round((end - start - 1.5) / 1.2));
+          tl.fromTo(el.querySelector(".mc-halo"), { scale:0.6, autoAlpha:0.4, transformOrigin:"center" },
+            { scale:1.6, autoAlpha:0, duration:1.2, ease:"sine.inOut", repeat:haloCycles }, start+1.2);
+        }
+        // pipeline — nodes light up in sequence, packets pulse along links
+        if (el.querySelector(".pipe-card")) {
+          tl.fromTo(el.querySelector(".pipe-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          el.querySelectorAll(".pipe-node").forEach(function(pn, pi){
+            tl.fromTo(pn.querySelector(".pn-ring"), { scale:0, autoAlpha:0, transformOrigin:"center" },
+              { scale:1, autoAlpha:1, duration:0.5, ease:"back.out(2)" }, start+0.45+pi*0.2);
+            tl.fromTo(pn.querySelector(".pn-label"), { y:10, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.4, ease:"power2.out" }, start+0.6+pi*0.2);
+          });
+          el.querySelectorAll(".pipe-link").forEach(function(pl, li){
+            var cycles = Math.max(2, Math.round((end - start - 1.0) / 0.8));
+            tl.fromTo(pl.querySelector(".pl-packet"), { xPercent:-60, autoAlpha:0 },
+              { xPercent:60, autoAlpha:1, duration:0.8, ease:"power1.inOut", repeat:cycles }, start+0.7+li*0.2);
+          });
+        }
+        // benchmark — horizontal bars fill left→right with count-up values
+        if (el.querySelector(".bm-card")) {
+          tl.fromTo(el.querySelector(".bm-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          el.querySelectorAll(".bm-item").forEach(function(item, bi){
+            var target = parseFloat(item.getAttribute("data-val"))||0;
+            var suffix = item.getAttribute("data-suffix")||"";
+            var pct = parseFloat(item.getAttribute("data-pct"))||0;
+            var fill = item.querySelector(".bm-fill");
+            var valEl = item.querySelector(".bm-val");
+            var counter = { v: 0 };
+            tl.fromTo(fill, { scaleX:0, transformOrigin:"left" }, { scaleX:pct/100, duration:0.8, ease:"power3.out" }, start+0.5+bi*0.12);
+            tl.to(counter, { v: target, duration:0.8, ease:"power1.out",
+              onUpdate: function(){ valEl.textContent = Math.round(counter.v)+suffix; } }, start+0.5+bi*0.12);
+          });
+        }
+        // security — CVSS arc draws, needle rotates, score counts up, pulse rings
+        if (el.querySelector(".sec-card")) {
+          tl.fromTo(el.querySelector(".sec-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          var secArc = el.querySelector(".sec-arc");
+          if (secArc) {
+            var arcLen = secArc.getTotalLength ? secArc.getTotalLength() : 251;
+            var cvss = parseFloat(el.querySelector(".sec-num").getAttribute("data-cvss"))||0;
+            var draw = (cvss/10) * arcLen;
+            tl.set(secArc, { strokeDasharray: arcLen, strokeDashoffset: arcLen }, start+0.4);
+            tl.to(secArc, { strokeDashoffset: arcLen - draw, duration: 1.0, ease: "power2.out" }, start+0.4);
+            var needle = el.querySelector(".sec-needle");
+            var ang = 180 - (cvss/10)*180;
+            tl.fromTo(needle, { rotation: 180, transformOrigin:"100px 110px" }, { rotation: ang, duration:1.0, ease:"power2.out" }, start+0.4);
+            var sc = { v: 0 };
+            tl.to(sc, { v: cvss, duration:1.0, ease:"power1.out",
+              onUpdate: function(){ el.querySelector(".sec-num").textContent = sc.v.toFixed(1); } }, start+0.4);
+          }
+          var pulseCycles = Math.max(2, Math.round((end - start - 1.0) / 1.0));
+          tl.fromTo(el.querySelector(".sec-pulse-dot"), { scale:0.6, autoAlpha:0.5, transformOrigin:"center" },
+            { scale:2.2, autoAlpha:0, duration:1.0, ease:"sine.inOut", repeat:pulseCycles }, start+0.8);
+          tl.fromTo(el.querySelectorAll(".sec-port"), { y:10, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.4, ease:"power2.out", stagger:0.08 }, start+0.7);
+          tl.fromTo(el.querySelectorAll(".sec-note, .sec-pulse-txt"), { y:10, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.4, ease:"power2.out" }, start+0.8);
+        }
+        // terminal — lines type in with a caret
+        if (el.querySelector(".term-card")) {
+          tl.fromTo(el.querySelector(".term-card"), { y:24, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out" }, start+0.3);
+          el.querySelectorAll(".term-line").forEach(function(tl2, ti){
+            tl.fromTo(tl2, { autoAlpha:0, x:-8 }, { autoAlpha:1, x:0, duration:0.35, ease:"power2.out" }, start+0.5+ti*0.22);
+          });
+          var caretCycles = Math.max(2, Math.round((end - start - 1.0) / 0.6));
+          tl.fromTo(el.querySelector(".term-caret"), { autoAlpha:0 }, { autoAlpha:1, duration:0.3, ease:"none", repeat:caretCycles, yoyo:true }, start+0.5);
+        }
+
         tl.to(el, { autoAlpha:0, duration:0.4, ease:"power2.inOut" }, end-0.35);
         tl.add(function(){ el.classList.remove("on"); }, end);
       });
@@ -542,9 +845,10 @@
       });
 
       /* ── L0 Atmosphere (deterministic Canvas 2D) ──
-         A fixed, seeded particle field + breathing radial glow. Redrawn on
-         every GSAP timeline seek via onUpdate, so Hyperframes can render any
-         exact frame. No Date.now()/requestAnimationFrame — fully deterministic. */
+         A fixed, seeded particle field + breathing radial glow + a subtle
+         ambient grid pulse + two drifting glow blobs. Redrawn on every GSAP
+         timeline seek via onUpdate, so Hyperframes can render any exact frame.
+         No Date.now()/requestAnimationFrame — fully deterministic. */
       (function buildAtmo(){
         var cv = document.getElementById("atmo");
         if (!cv || !cv.getContext) return;
@@ -556,14 +860,40 @@
         for (var i = 0; i < 60; i++) {
           parts.push({ x: rnd()*W, y: rnd()*H, r: 1.5 + rnd()*2.5, ph: rnd()*Math.PI*2, sp: 0.4 + rnd()*0.8 });
         }
+        // two drifting glow blobs (CanvasUI "aura" feel, kept subtle)
+        var blobs = [
+          { x: 0.22*W, y: 0.30*H, r: 0.30*W, ph: 0, sp: 0.5 },
+          { x: 0.80*W, y: 0.72*H, r: 0.26*W, ph: 2.1, sp: 0.4 },
+        ];
         function draw(t){
           ctx.clearRect(0, 0, W, H);
+          // breathing radial glow (center)
           var glow = 0.5 + 0.5*Math.sin(t*0.6);
           var g = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, W*0.6);
           g.addColorStop(0, "rgba(10,114,239,"+(0.05+0.03*glow).toFixed(3)+")");
           g.addColorStop(1, "rgba(10,114,239,0)");
           ctx.fillStyle = g;
           ctx.fillRect(0, 0, W, H);
+          // drifting glow blobs
+          for (var b = 0; b < blobs.length; b++) {
+            var bl = blobs[b];
+            var bx = bl.x + Math.sin(t*bl.sp + bl.ph) * 40;
+            var by = bl.y + Math.cos(t*bl.sp*0.7 + bl.ph) * 30;
+            var bg = ctx.createRadialGradient(bx, by, 0, bx, by, bl.r);
+            bg.addColorStop(0, "rgba(10,114,239,0.05)");
+            bg.addColorStop(1, "rgba(10,114,239,0)");
+            ctx.fillStyle = bg;
+            ctx.fillRect(bx - bl.r, by - bl.r, bl.r*2, bl.r*2);
+          }
+          // ambient grid pulse — a faint moving highlight across the grid
+          var gy = (t * 40) % H;
+          var gg = ctx.createLinearGradient(0, gy-120, 0, gy+120);
+          gg.addColorStop(0, "rgba(10,114,239,0)");
+          gg.addColorStop(0.5, "rgba(10,114,239,0.05)");
+          gg.addColorStop(1, "rgba(10,114,239,0)");
+          ctx.fillStyle = gg;
+          ctx.fillRect(0, gy-120, W, 240);
+          // particle field
           for (var i = 0; i < parts.length; i++) {
             var p = parts[i];
             var px = p.x + Math.sin(t*p.sp + p.ph) * 14;
@@ -608,7 +938,7 @@
       .slide .title { font-size:62px; font-weight:800; line-height:1.08; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
       .slide .sub { margin-top:20px; font-size:24px; font-weight:400; color:var(--ink-200); line-height:1.4; max-width:1300px; }
       .slide .headlines { margin:30px auto 0; width:100%; display:flex; flex-direction:column; gap:14px; border-top:1px solid var(--line); padding-top:24px; }
-      .slide .headlines .hl-head { font-family:"JetBrains Mono",monospace; font-size:14px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-400); margin-bottom:6px; }
+      .slide .headlines .hl-head { font-family:"JetBrains Mono",monospace; font-size:14px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-300); margin-bottom:6px; }
       .slide .headlines ul { list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:12px 28px; }
       .slide .headlines li { display:flex; align-items:baseline; gap:12px; font-size:19px; line-height:1.36; color:var(--ink-200); }
       .slide .headlines .hl-idx { flex:0 0 auto; color:var(--accent-text); font-family:"JetBrains Mono",monospace; font-weight:700; }
@@ -621,6 +951,11 @@
       .slide.has-illust .stage { padding-right: 24%; }
       .slide.has-illust .statement, .slide.has-illust .support, .slide.has-illust .bullets,
       .slide.has-illust .analysis, .slide.has-illust .callbacks { max-width: 1080px; }
+      /* two-column keypoint: left 40% text, right 60% visualizer */
+      .slide.has-visual .stage { left:0; width:40%; padding:0 0 0 8%; }
+      .slide.has-visual .visual { position:absolute; right:6%; top:50%; transform:translateY(-50%);
+        width:52%; z-index:4; }
+      .slide.has-visual .idx-tag { right:6%; }
       .slide .eyebrow { font-family:"JetBrains Mono",monospace; font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:28px; display:flex; align-items:center; gap:14px; }
       .slide .eyebrow::before { content:""; width:28px; height:2px; background:var(--accent); }
       .slide .statement { font-size:60px; font-weight:700; line-height:1.22; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
@@ -631,7 +966,7 @@
       .slide .bullets li { display:flex; align-items:baseline; gap:16px; font-size:25px; line-height:1.42; color:var(--ink-200); }
       .slide .bullets .b-dot { flex:0 0 auto; width:9px; height:9px; margin-top:11px; background:var(--accent); border-radius:2px; }
       .slide .bullets .b-txt { flex:1; }
-      .slide .idx-tag { position:absolute; right:8%; bottom:10%; z-index:3; font-family:"JetBrains Mono",monospace; font-size:18px; color:var(--ink-400); letter-spacing:.12em; }
+      .slide .idx-tag { position:absolute; right:8%; bottom:10%; z-index:3; font-family:"JetBrains Mono",monospace; font-size:18px; color:var(--ink-300); letter-spacing:.12em; }
       .slide .lockup { opacity:0.7; }
       /* three_points */
       .slide .wrap { position:absolute; inset:0; z-index:3; padding:11% 7% 8%; display:flex; flex-direction:column; }
@@ -701,7 +1036,7 @@
         background:var(--accent-soft); border-left:3px solid var(--accent);
         padding:16px 22px; border-radius:2px; }
       .slide .analysis .an-tag { flex:0 0 auto; font-family:"JetBrains Mono",monospace; font-size:15px;
-        letter-spacing:.12em; text-transform:uppercase; color:var(--accent-text); padding-top:5px; }
+        letter-spacing:.12em; text-transform:uppercase; color:#0a5fc4; padding-top:5px; }
       .slide .analysis .an-txt { font-size:23px; font-weight:500; line-height:1.45; color:var(--ink); }
       /* callback tags — the "links to earlier chapters" connective tissue */
       .slide .callbacks { margin-top:22px; display:flex; flex-wrap:wrap; gap:10px; max-width:1240px; }
@@ -710,6 +1045,91 @@
         color:var(--ink-300); border:1px solid var(--line); border-radius:2px; padding:7px 12px;
         background:var(--surface); }
       .slide .cb-tag .cb-arrow { color:var(--accent-text); font-weight:700; }
+
+      /* ── Content-aware visualizer cards (Layer 2) ── */
+      .viz-card { background:var(--surface); box-shadow:var(--shadow-elev); border-radius:2px;
+        border-top:3px solid var(--accent); overflow:hidden; }
+      .viz-head { display:flex; align-items:baseline; gap:14px; padding:20px 26px 0;
+        border-bottom:1px solid var(--line); padding-bottom:16px; }
+      .viz-head .viz-tag { font-family:"JetBrains Mono",monospace; font-size:15px; letter-spacing:.14em;
+        text-transform:uppercase; color:var(--accent-text); border:1px solid var(--accent-hair);
+        padding:3px 9px; border-radius:2px; }
+      .viz-head .viz-title { font-size:26px; font-weight:700; color:var(--ink); letter-spacing:-.01em; }
+      .viz-head .viz-unit { margin-left:auto; font-family:"JetBrains Mono",monospace; font-size:16px;
+        color:var(--ink-300); letter-spacing:.04em; }
+      /* standalone visualizer slides fill the wrap */
+      .slide .viz-standalone { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+      .slide .viz-standalone .viz-card { width:100%; max-width:1500px; height:100%; }
+
+      /* metric_chart */
+      .mc-card { padding-bottom:20px; }
+      .mc-svg { width:100%; height:auto; display:block; padding:10px 20px 0; }
+      .mc-line { stroke-dasharray: 2000; stroke-dashoffset: 2000; }
+      .mc-area { opacity:0; }
+      .mc-dot { transform-box: fill-box; transform-origin: center; }
+      .mc-halo { transform-box: fill-box; transform-origin: center; }
+      .mc-xlabel { font-family:"JetBrains Mono",monospace; font-size:15px; fill:var(--ink-300); }
+      .mc-vlabel { font-family:"JetBrains Mono",monospace; font-size:17px; font-weight:700; fill:var(--accent-text); }
+
+      /* pipeline */
+      .pipe-card { padding:30px 26px; }
+      .pipe { display:flex; align-items:center; justify-content:center; gap:0; }
+      .pipe-node { display:flex; flex-direction:column; align-items:center; gap:14px; min-width:150px; }
+      .pipe-node .pn-ring { width:96px; height:96px; border-radius:50%; background:var(--surface);
+        border:3px solid var(--accent); box-shadow:var(--shadow-rest);
+        display:flex; align-items:center; justify-content:center; }
+      .pipe-node .pn-idx { font-family:"JetBrains Mono",monospace; font-size:34px; font-weight:700; color:var(--accent-text); }
+      .pipe-node .pn-label { font-size:24px; font-weight:700; color:var(--ink); text-align:center; }
+      .pipe-link { position:relative; flex:1; min-width:60px; height:2px; background:var(--line-strong); margin:0 8px; }
+      .pipe-link .pl-packet { position:absolute; top:50%; left:0; width:12px; height:12px; margin-top:-6px;
+        border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+      .pipe-link .pl-label { position:absolute; top:-26px; left:50%; transform:translateX(-50%);
+        font-family:"JetBrains Mono",monospace; font-size:14px; color:var(--ink-400); white-space:nowrap; }
+
+      /* benchmark */
+      .bm-card { padding:30px 34px; }
+      .bm-list { display:flex; flex-direction:column; gap:22px; padding-top:10px; }
+      .bm-item { display:grid; grid-template-columns: 200px 1fr 120px; align-items:center; gap:18px; }
+      .bm-label { font-size:22px; font-weight:600; color:var(--ink-200); text-align:right; }
+      .bm-track { height:34px; background:rgba(23,23,23,0.04); border-radius:2px; overflow:hidden; }
+      .bm-fill { height:100%; width:100%; background:linear-gradient(90deg, var(--accent), var(--accent-text));
+        transform:scaleX(0); transform-origin:left; }
+      .bm-val { font-family:"JetBrains Mono",monospace; font-size:28px; font-weight:700; color:var(--accent-text); }
+
+      /* security */
+      .sec-card { padding:24px 30px; }
+      .sec-body { display:flex; align-items:center; gap:34px; padding-top:10px; }
+      .sec-gauge { position:relative; width:300px; flex:0 0 auto; }
+      .sec-svg { width:100%; height:auto; display:block; }
+      .sec-arc { stroke-dasharray: 251; stroke-dashoffset: 251; }
+      .sec-needle { transform-box: fill-box; }
+      .sec-score { position:absolute; left:0; right:0; bottom:6px; text-align:center; }
+      .sec-num { font-family:"JetBrains Mono",monospace; font-size:52px; font-weight:700; color:var(--accent-text); line-height:1; }
+      .sec-sev { display:block; font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.14em;
+        color:var(--ink-400); margin-top:4px; }
+      .sec-side { flex:1; display:flex; flex-direction:column; gap:18px; }
+      .sec-pulse { display:flex; align-items:center; gap:12px; }
+      .sec-pulse-dot { width:14px; height:14px; border-radius:50%; background:var(--accent); }
+      .sec-pulse-txt { font-size:22px; font-weight:600; color:var(--ink); }
+      .sec-ports-label { font-family:"JetBrains Mono",monospace; font-size:14px; letter-spacing:.12em;
+        color:var(--ink-400); text-transform:uppercase; }
+      .sec-ports-list { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+      .sec-port { font-family:"JetBrains Mono",monospace; font-size:18px; font-weight:700; color:var(--accent-text);
+        border:1px solid var(--accent-hair); background:var(--accent-soft); border-radius:2px; padding:6px 12px; }
+      .sec-note { font-size:19px; color:var(--ink-300); line-height:1.5; }
+
+      /* terminal */
+      .term-card { background:#0a0a0c; border-top:3px solid var(--accent); }
+      .term-bar { display:flex; align-items:center; gap:8px; padding:14px 20px; background:rgba(255,255,255,0.04); }
+      .term-dot { width:12px; height:12px; border-radius:50%; background:rgba(255,255,255,0.18); }
+      .term-title { margin-left:10px; font-family:"JetBrains Mono",monospace; font-size:16px; color:rgba(255,255,255,0.6); }
+      .term-body { padding:24px 28px; font-family:"JetBrains Mono",monospace; font-size:24px; line-height:1.7; }
+      .term-line { color:rgba(255,255,255,0.85); white-space:pre-wrap; }
+      .term-line.term-cmd { color:#7cc0ff; }
+      .term-line.term-out { color:rgba(255,255,255,0.55); }
+      .term-caret { display:inline-block; width:12px; height:26px; margin-left:4px; vertical-align:middle;
+        background:var(--accent); }
+
       /* speaker-tinted captions: male = brand accent, female = ink grey */
       .cap { border-left-color: var(--accent); }
       .cap.sp-f { border-left-color: var(--ink-300); }

@@ -149,13 +149,25 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
 
 - `slides[]` is an ordered list of full-frame visual slices. The builder auto-distributes them across `[HERO_DURATION, total_audio]` evenly when `_start`/`_end` are absent. If the last slide is not `outro`, one is auto-appended.
 - Slide types (matching the hand-built templates). **Pick by the copy's semantics, not the name** — a metric should be a `chart`/`counter`, a feature matrix a `cards`, a process a `steps`, never plain text (see `references/script-schema.md` §"Semantic-to-visual mapping"):
-  - `keypoint` — single statement with eyebrow + optional mono `support`. Use for thesis, definitions, "one-line conclusions". Wrap the key word in `**…**` for a kinetic-typography highlight (L3).
+  - `keypoint` — single statement with eyebrow + optional mono `support`. Use for thesis, definitions, "one-line conclusions". Wrap the key word in `**…**` for a kinetic-typography highlight (L3). Optionally set `visual` to one of the five visualizer keys to render a right-column dynamic card (40/60 two-column layout).
   - `three_points` — exactly 3 points, each with `no`, `title`, `body`. Use for "今日三条主线" / "three takeaways".
   - `chart` — animated dither bar chart: `bars[]` each `{ label, value, suffix? }`, optional `max`. Use for growth/comparison/ranking ("效率提升 10 倍", "A 是 B 的 3 倍"). Bars grow + value counters roll (L2).
   - `counter` — big animated metric: `value`, `label`, optional `prefix`/`suffix`/`delta`/`eyebrow`/`note`. Use for a single headline metric ("收入达 $5M"). The number rolls up (L2).
   - `cards` — 3D card spread: `cards[]` each `{ no?, title, body }`. Use for feature/capability matrices ("支持三大平台"). Cards fan out (L2).
   - `steps` — process/flow: `steps[]` each `{ no?, title, body }`. Use for "输入 → 分析 → 输出" pipelines. Connecting line draws in, nodes pulse (L2).
+  - `metric_chart` — animated SVG line chart: `chart` `{ points[], labels[], unit?, max? }`. Use for price / TVL / on-chain balance trends. Polyline draws in, latest point breathes a halo (L2).
+  - `pipeline` — node/data-flow diagram: `pipeline` `{ nodes[], links[]? }`. Use for infra / MEV / protocol pipelines (Sequencer → Builder → Proposer). Nodes light up, data packets pulse (L2).
+  - `benchmark` — horizontal comparison bars: `benchmark` `{ bars[] {label,value,suffix?}, unit? }`. Use for AI speed (tok/s) or TPS (1M+ TPS). Bars fill with count-up values (L2).
+  - `security` — CVSS gauge + port warning: `security` `{ cvss, ports[]?, pulse?, note? }`. Use for vulnerabilities / security events. Arc draws, needle rotates, pulse ring (L2).
+  - `terminal` — dark code block: `terminal` `{ lines[], title? }`. Use for Rust / smart-contract releases. Lines type in with a caret (L2).
   - `outro` — closing card with `recap` + `signoff`. Use for wrap-up. **Required as last slide** (auto-appended if missing).
+
+**The `visual` field** (content-aware right-column visualizer): any `keypoint`
+may set `visual` to `metric_chart` / `pipeline` / `benchmark` / `security` /
+`terminal`, with the data in a sibling field of the same name. This turns the
+slide into a 40/60 two-column layout (text left, dynamic visual card right) —
+the recommended way to pair a takeaway with its supporting data. The same five
+visualizers are also standalone slide types when the visual is the chapter hero.
 - `cover.headlines[]` (4 items) raises cover information density so daily covers look different.
 
 **Content direction (two modes, see `references/brand-design.md` §9):**

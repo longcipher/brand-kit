@@ -87,14 +87,51 @@ Every slide may also carry these **anti-AI-flavor** fields:
 
 | `type` | Required fields | Renders via |
 |--------|----------------|-------------|
-| `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `icon`/`analysis`/`callback`, optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | inline in `dashboard.html` (keypoint branch) |
+| `keypoint` | `statement` (string, ≤ ~40 chars), optional `eyebrow`, optional `support`, optional `bullets[]` (3–5 short fact lines shown as a structured list under the statement), optional `icon`/`analysis`/`callback`, optional `visual` (see below — renders a right-column dynamic visualizer, turning the slide into a 40/60 two-column layout), optional `audioFrom`/`audioTo` (turn ids binding the slide to a narration chapter) | inline in `dashboard.html` (keypoint branch) |
 | `three_points` | `points[3]` each `{ no, title, body }`, optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (three_points branch) |
 | `table` | `head[≥2]` (string column headers), `rows[]` (each row must have the same cell count as `head`), optional `numCols` (array of 0-based column indices rendered right-aligned in mono blue), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (table branch) |
 | `chart` | `bars[]` each `{ label, value, suffix? }` (2–6 bars), optional `max` (y-axis ceiling; auto-computed if omitted), optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (chart branch) |
 | `counter` | `value` (number), `label` (string), optional `prefix`/`suffix`, optional `delta` (e.g. `"+300%"`), optional `eyebrow`, optional `note`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (counter branch) |
 | `cards` | `cards[]` each `{ no?, title, body }` (2–4 cards), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (cards branch) |
 | `steps` | `steps[]` each `{ no?, title, body }` (2–5 steps), optional `title`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (steps branch) |
+| `metric_chart` | `chart` = `{ title?, unit?, points[] (numbers), labels[] (x-axis), max? }`, optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (metric_chart branch) |
+| `pipeline` | `pipeline` = `{ title?, nodes[] (strings), links[]? (edge labels) }`, optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (pipeline branch) |
+| `benchmark` | `benchmark` = `{ title?, unit?, bars[] each { label, value, suffix? } }`, optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (benchmark branch) |
+| `security` | `security` = `{ title?, cvss (0–10), ports[]?, pulse?, note? }`, optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (security branch) |
+| `terminal` | `terminal` = `{ title?, lines[] (strings; `$`-prefixed = command, `>`-prefixed = output) }`, optional `title`, optional `icon`/`analysis`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (terminal branch) |
 | `outro` | `recap` (string), optional `signoff`, optional `icon`, optional `audioFrom`/`audioTo` | inline in `dashboard.html` (outro branch) |
+
+### The `visual` field (content-aware right-column visualizer)
+
+Any `keypoint` slide may set `visual` to one of the five visualizer keys. When set,
+the slide becomes a **two-column layout**: left 40% = the text (statement, bullets,
+analysis, callbacks), right 60% = the dynamic visual card. The visualizer data lives
+in a sibling field named after the key:
+
+| `visual` | Data field | Visual treatment |
+|----------|-----------|------------------|
+| `metric_chart` | `chart` | SVG line chart — polyline draws in left→right, area fades, data dots pop, value labels count up, latest point breathes a halo |
+| `pipeline` | `pipeline` | Node/data-flow diagram — nodes light up in sequence, a data packet pulses along each link |
+| `benchmark` | `benchmark` | Horizontal comparison bars — fill left→right with count-up values (AI tok/s, TPS) |
+| `security` | `security` | CVSS semicircular gauge — arc draws, needle rotates, score counts up, pulse ring + port chips |
+| `terminal` | `terminal` | Dark terminal window — lines type in with a blinking caret (Rust / smart-contract releases) |
+
+Example — a keypoint with a right-column line chart:
+
+```jsonc
+{ "type": "keypoint", "eyebrow": "行情", "icon": "trend",
+  "statement": "链上余额持续累积。",
+  "visual": "metric_chart",
+  "chart": { "title": "BTC 链上余额", "unit": "万 BTC",
+             "points": [62, 64, 61, 66, 68, 70], "labels": ["M1","M2","M3","M4","M5","M6"] },
+  "analysis": "余额累积反映长期持有者惜售。",
+  "bullets": ["矿工持仓 119.19 万 BTC", "交易所净流出持续"] }
+```
+
+The same five visualizers are also available as **standalone slide types**
+(`metric_chart` / `pipeline` / `benchmark` / `security` / `terminal`) that fill the
+whole content area — use those when the visual is the hero of the chapter rather
+than a supporting card.
 
 ### Semantic-to-visual mapping (the 4-layer visual stack)
 
@@ -108,6 +145,11 @@ feature matrix as **cards**, a process as **steps**, never as plain text:
 | Comparison / ranking ("A 是 B 的 3 倍") | `chart` | animated dither bars + value counters |
 | Feature / capability matrix ("支持三大平台") | `cards` | 3D card spread fans out |
 | Process / architecture ("输入 → 分析 → 输出") | `steps` | connecting line draws in, nodes pulse |
+| Price / TVL / on-chain balance trend | `metric_chart` (or `keypoint` + `visual:"metric_chart"`) | SVG line chart draws in, latest point breathes a halo |
+| Infra / MEV / protocol pipeline (Sequencer → Builder → Proposer) | `pipeline` (or `keypoint` + `visual:"pipeline"`) | nodes light up, data packets pulse along links |
+| AI speed / TPS benchmark ("140 tok/s", "1M+ TPS") | `benchmark` (or `keypoint` + `visual:"benchmark"`) | horizontal bars fill with count-up values |
+| Vulnerability / security event (CVSS 9.8, exposed ports) | `security` (or `keypoint` + `visual:"security"`) | CVSS gauge draws, needle rotates, pulse ring + port chips |
+| Code / release / smart-contract deploy | `terminal` (or `keypoint` + `visual:"terminal"`) | dark terminal types lines in with a caret |
 | Breakthrough / pain-point flip ("毫秒级响应") | `keypoint` + `**keyword**` | kinetic typography highlight (L3) |
 | Thesis / one-line conclusion | `keypoint` | statement + bullets + analysis chip |
 

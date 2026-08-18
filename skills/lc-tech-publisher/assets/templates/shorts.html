@@ -37,12 +37,6 @@
       #bg-deco .deco { position: absolute; will-change: transform; }
       #bg-deco .deco svg { width: 100%; height: 100%; display: block; }
 
-      /* mascot — cute robot, bottom-left above the footer, under content */
-      #mascot { position: absolute; left: 5%; bottom: 9%; width: 130px; height: 130px; z-index: 4;
-        pointer-events: none; filter: drop-shadow(0 6px 12px rgba(23,23,23,0.08)); }
-      #mascot svg { width: 100%; height: 100%; display: block; }
-      #mascot .mascot-eyes { transform-box: fill-box; transform-origin: center; }
-
       /* HERO (visible by default so the first frame is a full cover, like the
          landscape video — no GSAP fromTo hiding it at t=0). Rendered as a
          fixed-height surface card filling the upper half of the frame, so the
@@ -158,26 +152,6 @@
       <!-- playful background decorations (fixed hand-built set, GSAP-animated) -->
       <div id="bg-deco"></div>
 
-      <!-- mascot: cute robot, bottom-left above the footer -->
-      <div id="mascot" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="8" aria-hidden="true">
-        <svg id="mascot-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-          <line x1="80" y1="44" x2="80" y2="26" stroke="#0a72ef" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="80" cy="19" r="8" fill="#0a72ef"/>
-          <circle cx="80" cy="90" r="52" fill="rgba(10,114,239,0.10)" stroke="#0a72ef" stroke-width="4"/>
-          <g class="mascot-eyes">
-            <circle cx="63" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
-            <circle cx="66" cy="84" r="5.5" fill="#0a63d0"/>
-            <circle cx="97" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
-            <circle cx="94" cy="84" r="5.5" fill="#0a63d0"/>
-          </g>
-          <path d="M72 108 Q80 116 88 108" fill="none" stroke="#0a63d0" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="50" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
-          <circle cx="110" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
-          <circle cx="66" cy="142" r="7" fill="#0a72ef"/>
-          <circle cx="94" cy="142" r="7" fill="#0a72ef"/>
-        </svg>
-      </div>
-
       <div class="sections-label">{{SECTIONS_LABEL}}</div>
 
       <div class="feed-viewport" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
@@ -269,19 +243,6 @@
             var spins = Math.max(2, Math.round(D / bobDur));
             tl.to(el, { y: g[5], rotation: g[4], duration: bobDur, ease: "sine.inOut", yoyo: true, repeat: spins, delay: (i % 3) * 0.35 }, 0);
           });
-        })();
-
-        // Mascot — float + blink, finite repeats sized to the composition.
-        (function buildMascot() {
-          var m = document.getElementById("mascot");
-          var floatCycles = Math.max(3, Math.round(D / 4.2));
-          tl.fromTo(m, { y: 0 }, { y: -16, duration: 2.1, ease: "sine.inOut", yoyo: true, repeat: floatCycles }, 0);
-          var blinkCycles = Math.max(3, Math.round(D / 5));
-          for (var b = 0; b < blinkCycles; b++) {
-            var at = 1.5 + b * 5;
-            tl.to(".mascot-eyes", { scaleY: 0.08, transformOrigin: "50% 50%", duration: 0.08, ease: "power2.in" }, at);
-            tl.to(".mascot-eyes", { scaleY: 1, transformOrigin: "50% 50%", duration: 0.12, ease: "power2.out" }, at + 0.09);
-          }
         })();
 
         // Hero MUST stay visible at t=0 — the first frame / poster is the cover.

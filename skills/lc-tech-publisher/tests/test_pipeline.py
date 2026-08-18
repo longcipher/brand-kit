@@ -181,6 +181,79 @@ def test_build_composition(work: Path) -> None:
     assert 'id="stage"' in html
 
 
+def test_build_composition_visualizers(work: Path) -> None:
+    """The five content-aware visualizer slide types + the keypoint `visual`
+    field must survive into the LC_DATA payload and render their data."""
+    script = json.loads((work / "script.json").read_text(encoding="utf-8"))
+    script["slides"] = [
+        {
+            "type": "keypoint",
+            "eyebrow": "行情",
+            "statement": "链上余额累积。",
+            "visual": "metric_chart",
+            "chart": {
+                "title": "BTC 余额",
+                "unit": "万 BTC",
+                "points": [62, 64, 70],
+                "labels": ["M1", "M2", "M3"],
+            },
+        },
+        {
+            "type": "pipeline",
+            "title": "MEV",
+            "pipeline": {"nodes": ["Sequencer", "Builder", "Proposer"]},
+        },
+        {
+            "type": "benchmark",
+            "title": "吞吐",
+            "benchmark": {"bars": [{"label": "Qwen", "value": 140, "suffix": " tok/s"}]},
+        },
+        {"type": "security", "title": "告警", "security": {"cvss": 9.8, "ports": ["445", "22"]}},
+        {
+            "type": "terminal",
+            "title": "代码",
+            "terminal": {"lines": ["$ cargo install mev-rs", "> v0.4.2 released"]},
+        },
+    ]
+    (work / "script.json").write_text(json.dumps(script, ensure_ascii=False), encoding="utf-8")
+    ts = {
+        "total": 12.0,
+        "engine": "edge-tts",
+        "turns": [
+            {
+                "id": f"{i + 1:02d}",
+                "speaker": "male" if i % 2 == 0 else "female",
+                "voice": "zh-CN-YunxiNeural",
+                "text": "x",
+                "file": f"audio/turn-{i + 1:02d}.wav",
+                "start": i * 4.0,
+                "end": (i + 1) * 4.0,
+                "duration": 4.0,
+            }
+            for i in range(3)
+        ],
+    }
+    (work / "ts.json").write_text(json.dumps(ts, ensure_ascii=False), encoding="utf-8")
+    out = work / "video"
+    res = run_script(
+        "build_composition.py",
+        "--script",
+        str(work / "script.json"),
+        "--timings",
+        str(work / "ts.json"),
+        "--out",
+        str(out),
+    )
+    assert res.returncode == 0, res.stderr
+    html = (out / "index.html").read_text(encoding="utf-8")
+    # each visualizer key + its data survives into the payload
+    for key in ("metric_chart", "pipeline", "benchmark", "security", "terminal"):
+        assert f'"{key}"' in html
+    assert "Sequencer" in html
+    assert "cargo install mev-rs" in html
+    assert "9.8" in html
+
+
 def test_build_composition_missing_timings(work: Path) -> None:
     out = work / "video"
     res = run_script(

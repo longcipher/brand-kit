@@ -80,7 +80,10 @@ def _validate_ticker(ticker, key: str, errors: list[str]) -> None:
             errors.append(f"{key}[{i}] must be {{label, value?, change?, dir?}}")
 
 
-VALID_SLIDE_TYPES = {"keypoint", "three_points", "outro", "table", "chart", "counter", "cards", "steps"}
+VALID_SLIDE_TYPES = {
+    "keypoint", "three_points", "outro", "table", "chart", "counter",
+    "cards", "steps", "metric_chart", "pipeline", "benchmark", "security", "terminal",
+}
 
 # Fixed cute-illustration catalog (must match `ICONS` in dashboard.html /
 # shorts.html). The LLM picks a key; unknown keys fall back to "spark".

@@ -103,12 +103,9 @@
       }
       .headlines .hl-txt b, .headlines .hl-txt strong { color: var(--ink); font-weight: 700; }
 
-      /* playful background decorations + mascot */
+      /* playful background decorations */
       #bg-deco { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
       #bg-deco .deco { position: absolute; }
-      #mascot { position: absolute; right: 4%; bottom: 9%; width: 96px; height: 96px; z-index: 4;
-        pointer-events: none; filter: drop-shadow(0 6px 12px rgba(23,23,23,0.08)); }
-      #mascot svg { width: 100%; height: 100%; display: block; }
 
       .meta-row {
         position: absolute; bottom: 5.5%; left: 6%; right: 6%;
@@ -151,26 +148,6 @@
         <svg class="deco" style="left:5.5%;bottom:22%;width:18px;height:18px" viewBox="0 0 64 64"><circle cx="32" cy="32" r="16" fill="none" stroke="rgba(10,114,239,0.30)" stroke-width="6"/></svg>
         <svg class="deco" style="left:9%;top:38%;width:14px;height:14px" viewBox="0 0 64 64"><rect x="14" y="14" width="36" height="36" rx="8" fill="rgba(10,114,239,0.14)"/></svg>
         <svg class="deco" style="right:8%;top:52%;width:16px;height:16px" viewBox="0 0 64 64"><path d="M32 6 c2.5 14 7 18.5 18 20 c-11 1.5 -15.5 6 -18 20 c-2.5 -14 -7 -18.5 -18 -20 c11 -1.5 15.5 -6 18 -20 Z" fill="rgba(10,114,239,0.14)"/></svg>
-      </div>
-
-      <!-- mascot: cute robot peeking from the bottom-right corner -->
-      <div id="mascot" aria-hidden="true">
-        <svg id="mascot-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-          <line x1="80" y1="44" x2="80" y2="26" stroke="#0a72ef" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="80" cy="19" r="8" fill="#0a72ef"/>
-          <circle cx="80" cy="90" r="52" fill="rgba(10,114,239,0.10)" stroke="#0a72ef" stroke-width="4"/>
-          <g class="mascot-eyes">
-            <circle cx="63" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
-            <circle cx="66" cy="84" r="5.5" fill="#0a63d0"/>
-            <circle cx="97" cy="82" r="12" fill="#ffffff" stroke="#0a72ef" stroke-width="3"/>
-            <circle cx="94" cy="84" r="5.5" fill="#0a63d0"/>
-          </g>
-          <path d="M72 108 Q80 116 88 108" fill="none" stroke="#0a63d0" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="50" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
-          <circle cx="110" cy="99" r="6" fill="rgba(10,114,239,0.16)"/>
-          <circle cx="66" cy="142" r="7" fill="#0a72ef"/>
-          <circle cx="94" cy="142" r="7" fill="#0a72ef"/>
-        </svg>
       </div>
 
       <div class="lockup">

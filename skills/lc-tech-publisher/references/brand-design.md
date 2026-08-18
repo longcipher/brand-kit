@@ -99,24 +99,26 @@ per-frame layout, no `transition: all`.
 ## 5. Fixed Components (the only visual vocabulary)
 
 Built by hand as standalone HTML templates. The LLM outputs JSON; the builder
-injects data into these. **Four components:**
+injects data into these. **Fixed components:**
 
 | # | Template | Drives | Purpose |
 |---|----------|--------|---------|
 | 1 | `cover.html` | `cover` + `headlines` | Cover card / video hero. Title, subtitle, kicker, 4 headline bullets, meta row. |
-| 2 | `dashboard.html` (keypoint branch) | `slides[]` where `type:"keypoint"` | A single highlighted statement / quote / key takeaway — large, centered, one accent line. |
+| 2 | `dashboard.html` (keypoint branch) | `slides[]` where `type:"keypoint"` | A single highlighted statement / quote / key takeaway — large, centered, one accent line. With a `visual` field it becomes a 40/60 two-column layout (text left, dynamic visualizer right). |
 | 3 | `dashboard.html` (three_points branch) | `slides[]` where `type:"three_points"` | Exactly 3 structured points (title + body each) in a 3-up grid. |
 | 4 | `dashboard.html` (outro branch) | `slides[]` where `type:"outro"` | Closing card: recap line + sign-off + brand lockup. |
 | 5 | `dashboard.html` (table branch) | `slides[]` where `type:"table"` | Comparison table (funding rounds, metrics, rankings). |
+| 6 | `dashboard.html` (visualizer branches) | `slides[]` where `type:"metric_chart" / "pipeline" / "benchmark" / "security" / "terminal"` | Content-aware dynamic visual cards (line chart, node flow, comparison bars, CVSS gauge, terminal). See §13. |
 
 The video master (`dashboard.html`) is a thin timeline orchestrator: it lays the
-5 slide types as full-frame **slides**, each a HyperFrames `clip` with
+slide types as full-frame **slides**, each a HyperFrames `clip` with
 `data-start`/`data-duration` aligned to the dialogue timeline, plus the persistent
-embedded single-line caption and the dialogue audio. The slides are rendered
-**inline** in `dashboard.html`'s JS (one `<section>` branch per `type`) — there are
-no separate per-slide template files. `cover.html` is the only standalone slide
-template and is shared by the 4-ratio static cover and the video hero. The
-components themselves never change — only their injected data does.
+brand header (lockup + date + progress bar), the embedded single-line caption and
+the dialogue audio. The slides are rendered **inline** in `dashboard.html`'s JS
+(one `<section>` branch per `type`) — there are no separate per-slide template
+files. `cover.html` is the only standalone slide template and is shared by the
+4-ratio static cover and the video hero. The components themselves never change —
+only their injected data does.
 
 ## 6. Semantic Exception (direction)
 
@@ -189,24 +191,50 @@ Two fixed elements turn a list of facts into a *connected argument*:
   radius, `--accent-text` arrow. These make cross-chapter links visible, so the
   viewer sees *why* the chapters belong together.
 
-## 12. Mascot & Background Decorations (the "living frame")
+## 12. Living Frame — Header, Atmosphere & Scene Transitions
 
 The canvas itself is alive, not just the slides — but always in the background
-layer (z-index 4, under the slides at 5) so nothing is ever occluded:
+layer (under the slides at z-index 5) so nothing is ever occluded. **There is no
+mascot / animated character** — the "living frame" is carried by atmosphere,
+a persistent header, and scene-switch beams:
 
-- **Mascot** — a cute hand-drawn brand-blue robot (`#mascot` in dashboard /
-  shorts / cover). It floats gently (`y: ±14px`, 2.1s sine.inOut, finite
-  repeat sized to the composition) and blinks on a fixed cadence (`scaleY
-  0.08→1` on `.mascot-eyes`, which needs `transform-box: fill-box`). Bottom-
-  right in the landscape video, bottom-left in vertical shorts, bottom-right on
-  the static cover. **It never hides content**: z-index 4 sits under the slide
-  layer, and the slides have transparent backgrounds so the robot stays visible
-  as a quiet companion.
+- **Persistent header (Layer 1)** — a top bar (`#header`, z-index 6) shown on
+  content slides (hidden during the cover, which carries its own lockup). It
+  holds the brand lockup (lc.svg + `LongCipher`), the date + kicker on the
+  right, and a **timeline progress bar** at its bottom edge that fills 0→100%
+  across the whole video (a single deterministic GSAP tween).
+- **Atmosphere canvas (Layer 0)** — `#atmo` is a deterministic Canvas 2D layer:
+  a seeded particle field, a breathing radial glow, two drifting glow blobs, and
+  a faint moving grid highlight. Redrawn on every GSAP timeline seek via
+  `onUpdate` reading `tl.time()` — no `Date.now()`/`requestAnimationFrame`, so
+  Hyperframes can seek any exact frame.
+- **Scene-switch beam** — `#scanline` is a vertical brand-blue gradient bar that
+  sweeps left→right once at each slide transition (a "laser scan" feel). It is
+  `opacity:0` by default and only animates during the ~0.7s transition window.
 - **Background glyphs** — a fixed hand-built set of tiny brand-blue shapes
   (spark / dot / cross / ring / square) scattered at the frame edges, each
   bobbing and slowly rotating on its own phase (`tl.to(el, {y, rotation},
   sine.inOut, yoyo, finite repeat)`). Below the slides (z-index 1), they add
   texture without competing with the center content.
-- **Rule**: like every other animation, the deco/mascot tweens use **finite**
+- **Rule**: like every other animation, the deco/atmo/beam tweens use **finite**
   repeat counts derived from the composition duration — `repeat:-1` is rejected
   by the checker on a finite composition.
+
+## 13. Content-Aware Visualizers (Layer 2)
+
+The right-column / standalone dynamic visual cards. The LLM only supplies
+structured data (via the `visual` field on `keypoint`, or the standalone slide
+types); the template owns all markup + animation. All motion is GSAP-driven
+(deterministic). Five visualizers:
+
+| Visualizer | Data | Animation |
+|------------|------|-----------|
+| `metric_chart` | `chart` `{ points[], labels[], unit?, max? }` | SVG polyline draws in (stroke-dashoffset), area fades, dots pop, value labels count up, latest point breathes a halo |
+| `pipeline` | `pipeline` `{ nodes[], links[]? }` | nodes light up in sequence, a data packet pulses along each link |
+| `benchmark` | `benchmark` `{ bars[] {label,value,suffix?}, unit? }` | horizontal bars fill left→right with count-up values |
+| `security` | `security` `{ cvss, ports[]?, pulse?, note? }` | CVSS arc draws, needle rotates, score counts up, pulse ring + port chips |
+| `terminal` | `terminal` `{ lines[], title? }` | dark window, lines type in with a blinking caret |
+
+**Two-column layout**: a `keypoint` with a `visual` field renders left 40% text
+(statement, bullets, analysis, callbacks) + right 60% visualizer card. The same
+visualizers are also standalone slide types that fill the whole content area.

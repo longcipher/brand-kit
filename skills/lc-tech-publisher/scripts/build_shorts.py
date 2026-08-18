@@ -221,25 +221,28 @@ def main() -> None:
     # renderer silently truncates audio to the file length and the tail is
     # silent. The synth loops the 5-bar progression, so any duration <= 60s
     # is a valid loop.
+    #
+    # IMPORTANT: the synthesized file is written into the PROJECT dir
+    # (dist/shorts_<lang>/audio/shorts_bgm.mp3), NEVER back to the skill source
+    # assets/audio/shorts_bgm.mp3. The source is the canonical 10s loop and is
+    # committed to Git; the per-build duration variant is a build artifact
+    # (dist/ is gitignored), so we must not mutate the tracked source each run.
     bgm_out = out_dir / "audio" / "shorts_bgm.mp3"
+    (out_dir / "audio").mkdir(parents=True, exist_ok=True)
     try:
         res = subprocess.run(
             [sys.executable, str(SKILL_ROOT / "scripts" / "make_shorts_bgm.py"),
-             "--out", str(bgm_src), "--duration", f"{duration:.2f}"],
+             "--out", str(bgm_out), "--duration", f"{duration:.2f}"],
             capture_output=True, text=True,
         )
-        if res.returncode == 0:
-            (out_dir / "audio").mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(bgm_src, bgm_out)
-        else:
+        if res.returncode != 0:
             sys.stderr.write(f"! BGM synth failed: {res.stderr}\n")
+            # fall back to the canonical source copy
             if bgm_src.exists():
-                (out_dir / "audio").mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(bgm_src, bgm_out)
     except FileNotFoundError as e:
         sys.stderr.write(f"! cannot invoke make_shorts_bgm.py: {e}\n")
         if bgm_src.exists():
-            (out_dir / "audio").mkdir(parents=True, exist_ok=True)
             shutil.copyfile(bgm_src, bgm_out)
     if not bgm_out.exists():
         sys.stderr.write(f"! shorts BGM missing: {bgm_src} (run make_shorts_bgm.py)\n")
