@@ -147,15 +147,26 @@ def main() -> None:
 
     # Second pass: fill gaps so every slide has a contiguous, non-overlapping
     # window across [HERO_DURATION, total]. Slides with explicit windows keep
-    # them; the rest split the remaining audio proportionally.
+    # them; the rest are distributed PROPORTIONALLY BY TURN COUNT so each
+    # slide's on-screen window matches the dialogue it illustrates. This
+    # prevents cumulative drift (voice pulling ahead of slides) that the old
+    # even-time-split caused.
     if any(w is None for w in windows):
-        # Build explicit boundaries where known, then distribute the rest.
-        seg = (total - HERO_DURATION) / n
-        for i, w in enumerate(windows):
-            if w is None:
-                s_start = round(HERO_DURATION + i * seg, 3)
-                s_end = round(HERO_DURATION + (i + 1) * seg, 3)
-                windows[i] = (s_start, s_end)
+        unbound_indices = [i for i, w in enumerate(windows) if w is None]
+        n_unbound = len(unbound_indices)
+        n_turns = len(turns)
+        # Assign each unbound slide a proportional range of dialogue turns.
+        # The slide's time window = [start of its first turn, end of its last].
+        turn_step = n_turns / n_unbound if n_unbound > 0 else 1
+        for rank, slide_idx in enumerate(unbound_indices):
+            ti_start = int(round(rank * turn_step))
+            ti_end = int(round((rank + 1) * turn_step))
+            ti_start = min(ti_start, n_turns - 1)
+            ti_end = max(ti_end, ti_start + 1)
+            ti_end = min(ti_end, n_turns)
+            t_start = float(turns[ti_start]["start"])
+            t_end = float(turns[ti_end - 1]["end"])
+            windows[slide_idx] = (round(t_start, 3), round(t_end, 3))
     # Ensure monotonic, gap-free coverage. Each slide starts at its resolved
     # audio-binding window, and its end is pushed to the NEXT slide's start so
     # unbound "bridge" turns are visually absorbed by the previous slide (no

@@ -87,7 +87,7 @@ def _skip_srt(project: Path, audio_only: bool) -> bool:
 
 def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
     res = subprocess.run(
-        cmd, encoding="utf-8", capture_output=True, timeout=900, cwd=str(cwd) if cwd else None
+        cmd, encoding="utf-8", capture_output=True, timeout=3600, cwd=str(cwd) if cwd else None
     )
     if res.returncode != 0:
         sys.stderr.write(f"! {' '.join(cmd)} failed:\n{res.stderr or res.stdout}\n")

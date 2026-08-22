@@ -42,11 +42,20 @@ def warn(msg: str) -> None:
     sys.stderr.write(f"! {msg}\n")
 
 
+def _normalize_text(text: str) -> str:
+    """Normalize text for duplicate detection: strip, collapse whitespace,
+    strip punctuation, lowercase. Keeps only alphanumerics + CJK chars."""
+    t = re.sub(r"\s+", "", text.strip())
+    return re.sub(r"[^\w\u4e00-\u9fff]", "", t).lower()
+
+
 def _validate_dialogue(podcast, key: str, errors: list[str]) -> None:
     if not isinstance(podcast, list) or not podcast:
         errors.append(f"{key}[] must be a non-empty array of dialogue turns")
         return
     valid_speakers = {"male", "female"}
+    prev_norm = None
+    prev_idx = None
     for i, t in enumerate(podcast):
         if not isinstance(t, dict):
             errors.append(f"{key}[{i}] must be an object")
@@ -54,8 +63,32 @@ def _validate_dialogue(podcast, key: str, errors: list[str]) -> None:
         sp = t.get("speaker")
         if sp not in valid_speakers:
             errors.append(f"{key}[{i}].speaker must be 'male' or 'female' (got {sp!r})")
-        if not t.get("text"):
+        text = t.get("text", "")
+        if not text:
             errors.append(f"{key}[{i}].text is required (the spoken line)")
+        # Duplicate detection: flag consecutive turns with high text overlap.
+        norm = _normalize_text(text)
+        if norm and prev_norm is not None and len(norm) > 5 and len(prev_norm) > 5:
+            if norm == prev_norm:
+                errors.append(
+                    f"{key}[{i}] is a VERBATIM DUPLICATE of {key}[{prev_idx}] "
+                    f"(same normalized text). Remove the duplicate turn."
+                )
+            else:
+                # Character-bag Jaccard similarity catches paraphrased duplicates
+                set_a, set_b = set(norm), set(prev_norm)
+                jaccard = len(set_a & set_b) / len(set_a | set_b) if (set_a | set_b) else 0
+                # Also check: shorter fully contained in longer (with gap tolerance)
+                shorter, longer = (norm, prev_norm) if len(norm) <= len(prev_norm) else (prev_norm, norm)
+                containment = shorter in longer
+                if jaccard > 0.70 or (containment and len(shorter) / len(longer) > 0.75):
+                    errors.append(
+                        f"{key}[{i}] is a NEAR-DUPLICATE of {key}[{prev_idx}] "
+                        f"(similarity {jaccard:.0%}). Remove or substantially rephrase."
+                    )
+        if norm:
+            prev_norm = norm
+            prev_idx = i
         if t.get("voice") is not None and not isinstance(t.get("voice"), str):
             errors.append(f"{key}[{i}].voice must be a string if present")
         emo = t.get("emotion")
@@ -132,6 +165,12 @@ def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> N
         if stype == "keypoint":
             if not s.get("statement"):
                 errors.append(f"{key}[{i}].statement is required for keypoint slides")
+            body = s.get("body")
+            if not body or (isinstance(body, list) and len(body) < 2):
+                warns.append(
+                    f"{key}[{i}] (keypoint) has no/insufficient `body` — add 2–4 detail paragraphs "
+                    f"so the slide has substantive content matching the narration"
+                )
         elif stype == "three_points":
             pts = s.get("points")
             if not isinstance(pts, list) or len(pts) != 3:
@@ -233,6 +272,130 @@ def validate_mode(path: str) -> None:
         if not isinstance(ce, dict) or not ce.get("title"):
             errors.append("coverEn.title is required when coverEn is present")
 
+    # ── Content completeness check: every article section must be covered ──
+    # Compare the script's content against the article outline headings and
+    # bullet-level text. We extract the raw bullet text from the source article
+    # (not just headings) so we can verify that specific topics/items appear
+    # in the dialogue. This catches the "LLM skipped the later sections" bug.
+    outline_path = Path(path).parent / "article.json"
+    if outline_path.exists():
+        try:
+            outline = json.loads(outline_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            outline = None
+        if outline:
+            # Build the full script text (podcast + slides) to search for coverage
+            script_text = " ".join(t.get("text", "") for t in podcast)
+            script_text += " " + " ".join(
+                s.get("statement", "") + " " + s.get("title", "") + " " + s.get("eyebrow", "")
+                + " " + " ".join(p.get("title", "") + " " + p.get("body", "") for p in (s.get("points") or []))
+                + " " + " ".join(p.get("title", "") + " " + p.get("body", "") for p in (s.get("cards") or []))
+                + " " + " ".join(p.get("title", "") + " " + p.get("body", "") for p in (s.get("steps") or []))
+                + " " + " ".join(s.get("body", []) if isinstance(s.get("body"), list) else [s.get("body", "")])
+                + " " + s.get("recap", "")
+                for s in (slides or [])
+            )
+            script_text_lower = script_text.lower()
+            paragraphs = outline.get("paragraphs", [])
+
+            # Strategy: the article outline's paragraphs[] are the bullet-level
+            # content — each one describes a specific topic/item. We check whether
+            # the distinctive terms from each bullet appear in the script. If a
+            # cluster of bullets (a section) has very few matches, that section
+            # was likely skipped by the LLM.
+            #
+            # We partition paragraphs into sections using H2 headings as boundaries.
+
+            headings = outline.get("headings", [])
+            paragraphs = outline.get("paragraphs", [])
+
+            # Extract H2-level section headings (一、二、三、四、五、)
+            h2_pattern = re.compile(r"^[一二三四五六七八九十][、.\s]")
+            h2_indices = [i for i, h in enumerate(headings) if h2_pattern.match(h.strip())]
+
+            # Map each heading index to its section number (which H2 it belongs to)
+            # For each paragraph, determine which section it falls under by finding
+            # the nearest preceding H2 heading in the original text order.
+            # Since outline doesn't store positions, we use a heuristic:
+            # distribute paragraphs evenly across the gaps between H2 headings.
+
+            # Better: use the heading index to section mapping. Each H2 starts a new
+            # section. Paragraphs are assigned proportionally.
+            if h2_indices and paragraphs:
+                n_sections = len(h2_indices)
+                # Distribute paragraphs across sections proportionally
+                paras_per_section = len(paragraphs) / n_sections
+                section_paragraphs: list[list[str]] = [[] for _ in range(n_sections)]
+                for pi, para in enumerate(paragraphs):
+                    sec_idx = min(int(pi / paras_per_section), n_sections - 1)
+                    section_paragraphs[sec_idx].append(para)
+
+                def _clean_md(text: str) -> str:
+                    # Strip markdown formatting so we compare clean text
+                    # (the dialogue text has no **bold** or *italic* markers)
+                    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)  # **bold**
+                    text = re.sub(r'\*(.+?)\*', r'\1', text)        # *italic*
+                    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)  # [link](url)
+                    text = re.sub(r'`([^`]+)`', r'\1', text)        # `code`
+                    return text.strip()
+
+                uncovered_sections = []
+                for si, sec_paras in enumerate(section_paragraphs):
+                    if not sec_paras:
+                        continue
+                    h2_name = headings[h2_indices[si]].strip() if si < len(h2_indices) else f"Section {si+1}"
+
+                    # Extract DISTINCTIVE terms from each section: proper nouns,
+                    # project names, acronyms, and specific technical terms.
+                    # Skip generic boilerplate that appears everywhere.
+                    stopwords = {"核心更新", "相关链接", "核心逻辑", "核心观点", "核心内容",
+                                 "核心实测", "具体介绍", "具体要求", "联系方式", "工作形式",
+                                 "岗位需求", "招聘方", "核心能力", "人才背景", "相关链接",
+                                 "时报报道", "官方博客", "深度解析", "深度报道", "实战经验"}
+                    topic_keywords: list[str] = []
+                    for para in sec_paras:
+                        para_clean = _clean_md(para)
+                        # Extract Chinese character sequences (4+ chars)
+                        chinese_runs = re.findall(r'[\u4e00-\u9fff]{4,}', para_clean)
+                        for run in chinese_runs:
+                            if run not in stopwords and run not in topic_keywords:
+                                topic_keywords.append(run)
+                        # Also extract English proper nouns / acronyms (2+ chars)
+                        english_runs = re.findall(r'\b[A-Za-z][A-Za-z0-9.]{1,}\b', para_clean)
+                        for run in english_runs:
+                            if len(run) >= 2 and run not in topic_keywords:
+                                topic_keywords.append(run)
+                    if not topic_keywords:
+                        continue
+                    # Check: how many of these keywords appear in the script?
+                    matched = 0
+                    missing_samples = []
+                    for kw in topic_keywords:
+                        kw_lower = kw.lower()
+                        found = kw_lower in script_text_lower
+                        if found:
+                            matched += 1
+                        else:
+                            missing_samples.append(kw[:20])
+                    # Flag if less than 20% of the section's keywords are covered.
+                    # This catches blatant section-skipping (the "LLM skipped the
+                    # later sections" bug) while tolerating the LLM's natural
+                    # rephrasing of concepts in different words.
+                    coverage = matched / len(topic_keywords) if topic_keywords else 1
+                    if coverage < 0.20:
+                        uncovered_sections.append((h2_name, missing_samples[:3], coverage))
+
+                if uncovered_sections:
+                    warns.append(
+                        f"Content completeness: {len(uncovered_sections)} article section(s) appear under-covered:"
+                    )
+                    for sec_name, missing, cov in uncovered_sections:
+                        warns.append(f"  - {sec_name} (matched {cov:.0%}): e.g. {', '.join(missing)}")
+                    warns.append(
+                        "Cover EVERY section — add dialogue turns for missing topics. "
+                        "Do NOT skip article content to control duration; the video can be longer."
+                    )
+
     if errors:
         sys.stderr.write("✗ script.json validation failed:\n")
         for e in errors:
@@ -251,9 +414,10 @@ def validate_mode(path: str) -> None:
     if not meta.get("roles"):
         meta["roles"] = {"male": "主讲", "female": "主持"}
     # rough target length estimate from dialogue text
+    # Edge TTS speaks zh at ~5.5 chars/sec (measured), NOT the old 3.2–3.6 estimate
     if not meta.get("target_seconds"):
         total_chars = sum(len(t.get("text", "")) for t in podcast)
-        meta["target_seconds"] = round(total_chars / 3.4)
+        meta["target_seconds"] = round(total_chars / 5.5)
     data["cover"] = cover
     if not cover.get("kicker"):
         cover["kicker"] = meta["kicker"]
@@ -263,6 +427,10 @@ def validate_mode(path: str) -> None:
         f"✓ script.json valid: {len(podcast)} dialogue turns, "
         f"{len(slides or [])} slides, target ~{meta['target_seconds']}s, lang={meta['lang']}\n"
     )
+    if warns:
+        sys.stderr.write("Warnings:\n")
+        for w in warns:
+            sys.stderr.write(f"  - {w}\n")
     sys.exit(0)
 
 

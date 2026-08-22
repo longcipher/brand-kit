@@ -337,6 +337,9 @@
           var callbacks = (s.callback||[]).map(function(cb){
             return '<span class="cb-tag"><span class="cb-arrow">↳</span><span class="cb-txt">'+esc(cb)+'</span></span>';
           }).join("");
+          var bodyParas = (s.body||[]).map(function(p){
+            return '<p class="body-para">'+escHl(p)+'</p>';
+          }).join("");
           html += ''
             + '<section class="slide'+(s.icon?' has-illust':'')+hasVisual+'" id="slide-'+n+'" data-s="'+n+'"'+sAttrs+'>'
             +   '<div class="accent-rule"></div>'
@@ -345,6 +348,7 @@
             +     '<div class="eyebrow">'+esc(s.eyebrow||"核心观点")+'</div>'
             +     '<div class="statement">'+escHl(s.statement||"")+'</div>'
             +     (s.support ? '<div class="support">'+escHl(s.support)+'</div>' : '')
+            +     (bodyParas ? '<div class="body">'+bodyParas+'</div>' : '')
             +     (bullets ? '<ul class="bullets">'+bullets+'</ul>' : '')
             +     (s.analysis ? '<div class="analysis"><span class="an-tag">'+(DATA.lang==="en"?"SO-WHAT":"分析")+'</span><span class="an-txt">'+escHl(s.analysis)+'</span></div>' : '')
             +     (callbacks ? '<div class="callbacks">'+callbacks+'</div>' : '')
@@ -668,8 +672,11 @@
         }
         tl.fromTo(el.querySelectorAll(".eyebrow, .head, .kicker"), { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power3.out" }, start+0.2);
         tl.fromTo(el.querySelectorAll(".statement, .recap, .card"), { y:26, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.7, ease:"power3.out" }, start+0.35);
+        if (el.querySelectorAll(".body-para").length) {
+          tl.fromTo(el.querySelectorAll(".body-para"), { y:18, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.5, ease:"power2.out", stagger:0.12 }, start+0.55);
+        }
         if (el.querySelectorAll(".bullets li").length) {
-          tl.fromTo(el.querySelectorAll(".bullets li"), { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power2.out", stagger:0.1 }, start+0.55);
+          tl.fromTo(el.querySelectorAll(".bullets li"), { x:-16, autoAlpha:0 }, { x:0, autoAlpha:1, duration:0.5, ease:"power2.out", stagger:0.1 }, start+0.7);
         }
         tl.fromTo(el.querySelectorAll(".point"), { y:28, autoAlpha:0 }, { y:0, autoAlpha:1, duration:0.6, ease:"power3.out", stagger:0.12 }, start+0.4);
         tl.fromTo(el.querySelectorAll(".support, .signoff, .divider"), { autoAlpha:0 }, { autoAlpha:1, duration:0.5 }, start+0.7);
@@ -962,6 +969,9 @@
       /* kinetic typography highlight (L3) — `**keyword**` in copy */
       .kt-hl { color:var(--accent-text); background:var(--accent-soft); border-bottom:2px solid var(--accent); padding:0 2px; border-radius:2px; }
       .slide .support { margin-top:30px; font-size:26px; font-weight:400; color:var(--ink-300); line-height:1.45; max-width:1200px; font-family:"JetBrains Mono",monospace; letter-spacing:.02em; }
+      .slide .body { margin-top:28px; display:flex; flex-direction:column; gap:14px; max-width:1300px; }
+      .slide .body-para { font-size:24px; font-weight:400; color:var(--ink-200); line-height:1.55; margin:0; }
+      .slide.has-illust .body { max-width:1080px; }
       .slide .bullets { list-style:none; margin-top:34px; display:grid; gap:16px; max-width:1240px; }
       .slide .bullets li { display:flex; align-items:baseline; gap:16px; font-size:25px; line-height:1.42; color:var(--ink-200); }
       .slide .bullets .b-dot { flex:0 0 auto; width:9px; height:9px; margin-top:11px; background:var(--accent); border-radius:2px; }

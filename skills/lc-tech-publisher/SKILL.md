@@ -95,9 +95,14 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
   "slides": [                               // ordered visual components (see types below)
     { "type": "keypoint",
       "eyebrow": "核心逻辑",
-      "icon": "cube",                        // cute flat illustration key (see catalog)
+      "icon": "cube",
       "statement": "价格只是横盘,真正收紧的是三条逻辑链。",
       "support": "算力去周期化 · 机构化 · 利率锚定",
+      "body": [
+        "2024年比特币矿工收入结构发生了根本性变化:交易手续费占比从上一轮牛市的15%降至不足3%,这意味着矿工不再依赖市场波动获利。",
+        "与此同时,AI算力租赁收入首次占到头部矿企总营收的20%以上,Mar Riot和CleanSparks的财报都验证了这一趋势。",
+        "这种收入结构的转变,正在重塑整个挖矿行业的估值逻辑——从周期股向基础设施股靠拢。"
+      ],
       "analysis": "真正的问题不在价格,而在现金流:谁能把算力卖成稳定收入,谁就拿到下一轮定价权。",
       "callback": ["呼应开头:宏观利率压力正是矿企抛币的推手"] },
 
@@ -130,6 +135,9 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
   - zh: `total_chars ≈ target_seconds × 5.5`. For an **11 min (660s)** video write **≥ 3600 zh chars**; for 12 min (720s) write **≥ 3900 zh chars**. A 2000–2400-char script only yields ~6–7 min — that is a failed gate.
   - en: `total_words ≈ target_seconds × 2.2`. For 11 min write **≥ 1450 words**.
   - After `generate_audio.py`, confirm `speaker_timestamps[_en].json.total` ≥ `target_seconds × 0.9`; if short, **expand facts inside existing turns** (never filler) and re-run until the gate passes.
+  - **No upper limit** — a video can run 15, 20, 30+ minutes. The ONLY hard minimum is 11 min (660s). Never cut content to stay under any imagined ceiling.
+
+- **Content completeness (hard rule — do NOT skip article sections).** The `podcast[]` dialogue **must cover every section of the source article**. After drafting the script, cross-check: for every H2/H3 heading in `dist/article.json`, at least one dialogue turn or slide must reference its topic. **Skipping a section to control duration is a failed gate** — if a section exists in the article, it appears in the video. When the article is long, the video gets longer; that is correct behavior. The fix for "running short" is **more detail per section** (numbers, names, so-what analysis), never fewer sections.
 
 **Anti-"AI flavor" dialogue rules (top user complaint — read before writing ANY turn):**
 
@@ -144,10 +152,12 @@ uv run python scripts/parse_article.py --input <article.md> --output dist/articl
 - `icon`: pick a cute flat illustration key from the catalog (`shield/rocket/chart/coins/cube/atom/bolt/net/lock/spark/pick/scale/bot/bank/handshake/trend/gauge/layers/flow`). The template owns the SVG; you only pick. Matches the chapter's topic (e.g. miner chapter → `pick`, macro → `chart`, post-quantum → `atom`, growth → `trend`/`gauge`, matrix → `layers`, process → `flow`).
 - `analysis`: a 1–2 sentence so-what line rendered as a distinct "分析 / SO-WHAT" chip under the bullets. Must be a *specific* inference tied to the numbers above — never a generic slogan.
 - `callback`: one or more short strings that connect this chapter to another (e.g. `"呼应开头:零售 -0.6% 的宏观压力"`). Rendered as small `↳` tags — this is the visible "information linking" layer.
+- `body`: **IMPORTANT — every keypoint slide SHOULD have a `body` array.** An array of 2–4 paragraphs (each 50–150 zh chars / 30–80 en words) that explain the chapter's topic in detail. This is the MAIN content area of the slide — without it the slide feels sparse and the viewer has nothing to read while the narration plays. Each paragraph should cover ONE specific fact, number, or sub-point. The paragraphs animate in staggered and stay on screen for the full slide window. Write substantive, specific content with numbers and names — never filler or generic restatements of the `statement`.
 
 **Slide rules:**
 
-- `slides[]` is an ordered list of full-frame visual slices. The builder auto-distributes them across `[HERO_DURATION, total_audio]` evenly when `_start`/`_end` are absent. If the last slide is not `outro`, one is auto-appended.
+- `slides[]` is an ordered list of full-frame visual slices. The builder auto-distributes them across `[HERO_DURATION, total_audio]` by turn count (each slide owns a proportional range of dialogue turns, so its on-screen window matches the narration). If the last slide is not `outro`, one is auto-appended.
+- **Content richness (hard rule — slides must not be sparse).** A slide with only a one-line `statement` is UNACCEPTABLE — the viewer has nothing to read while the narration plays. Every `keypoint` slide MUST include a `body` array with 2–4 detailed paragraphs (facts, numbers, names, sub-points). Every `three_points` slide MUST have meaningful `body` text in each point. The slide's visual content must match the narration: what the voice says while the slide is on screen SHOULD be reflected in the slide's text.
 - Slide types (matching the hand-built templates). **Pick by the copy's semantics, not the name** — a metric should be a `chart`/`counter`, a feature matrix a `cards`, a process a `steps`, never plain text (see `references/script-schema.md` §"Semantic-to-visual mapping"):
   - `keypoint` — single statement with eyebrow + optional mono `support`. Use for thesis, definitions, "one-line conclusions". Wrap the key word in `**…**` for a kinetic-typography highlight (L3). Optionally set `visual` to one of the five visualizer keys to render a right-column dynamic card (40/60 two-column layout).
   - `three_points` — exactly 3 points, each with `no`, `title`, `body`. Use for "今日三条主线" / "three takeaways".
