@@ -269,16 +269,14 @@ cd dist/video_en && npx --yes hyperframes lint && npx --yes hyperframes check
 
 ## Step 7 — Render & Deliver
 
-1. **Cover images** — both language sets, four ratios each:
+1. **Cover images** — both language sets, four ratios each. **Always use `--all`**: it reads `manifest.json` and renders every ratio at its true size. The single-file mode (`--name cover_9x16`) defaults to `--width 1920 --height 1080` and would squash portrait covers into landscape:
 
 ```bash
-for lang in "" _en; do
-  for r in 16x9 9x16 4x3 3x4; do
-    uv run python scripts/render_cover.py --project "dist/cover$lang" \
-      --name "cover_$r" --output "output/cover$lang_$r.png"
-  done
-done
+uv run python scripts/render_cover.py --project dist/cover    --output output/cover_16x9.png    --all
+uv run python scripts/render_cover.py --project dist/cover_en --output output/cover_en_16x9.png --all
 ```
+
+`--all` derives the output filename prefix from `--output` (`cover_16x9.png` → `cover_*`, `cover_en_16x9.png` → `cover_en_*`) and emits all four ratios at manifest dimensions (16x9 1920×1080 · 9x16 1080×1920 · 4x3 1440×1080 · 3x4 1080×1440).
 
 2. **Podcast audio** (zh + en):
 

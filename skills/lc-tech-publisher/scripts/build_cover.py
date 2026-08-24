@@ -83,6 +83,21 @@ def main() -> None:
     (out_dir / "logos").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(logo_src, out_dir / "logos" / "lc.svg")
 
+    # Vendor GSAP locally so cover rendering never depends on CDN reachability.
+    vendor_src = SKILL_ROOT / "assets" / "vendor" / "gsap.min.js"
+    if vendor_src.exists():
+        vdst = out_dir / "assets" / "vendor"
+        vdst.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(vendor_src, vdst / "gsap.min.js")
+
+    # Self-hosted brand fonts — no Google Fonts CDN dependency at render time.
+    fonts_src = SKILL_ROOT / "assets" / "fonts"
+    if fonts_src.is_dir():
+        fdst = out_dir / "assets" / "fonts"
+        fdst.mkdir(parents=True, exist_ok=True)
+        for woff in sorted(fonts_src.glob("*.woff2")):
+            shutil.copyfile(woff, fdst / woff.name)
+
     template_path = SKILL_ROOT / "assets" / "templates" / "cover.html"
     if not template_path.exists():
         die(f"missing template: {template_path}")

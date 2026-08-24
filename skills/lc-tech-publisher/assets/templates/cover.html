@@ -4,13 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{TITLE}}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+      /* Self-hosted brand fonts (assets/fonts, copied by build scripts) — no CDN dependency. */
+      @font-face { font-family: "DM Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("assets/fonts/dm-sans-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "DM Sans"; font-style: normal; font-weight: 500; font-display: swap; src: url("assets/fonts/dm-sans-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "DM Sans"; font-style: normal; font-weight: 600; font-display: swap; src: url("assets/fonts/dm-sans-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "DM Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("assets/fonts/dm-sans-latin-700-normal.woff2") format("woff2"); }
+      @font-face { font-family: "DM Sans"; font-style: normal; font-weight: 800; font-display: swap; src: url("assets/fonts/dm-sans-latin-800-normal.woff2") format("woff2"); }
+      @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
+    </style>
+    <script src="assets/vendor/gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';document.head.appendChild(s);"></script>
     <style>
       :root {
         --canvas: #fafbfc;
