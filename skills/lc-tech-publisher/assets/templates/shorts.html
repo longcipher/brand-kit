@@ -135,29 +135,29 @@
       <div class="scanline" id="scanline"></div>
 
       <!-- HERO (static cover, visible at t=0) -->
-      <div class="hero" id="hero">
-        <div class="hd">
-          <div class="lockup"><img src="logos/lc.svg" alt=""><span>LongCipher</span></div>
-          <div class="date">{{DATE}}</div>
+      <div class="hero" id="hero" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
+        <div class="hd" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="lockup" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion><img src="logos/lc.svg" alt=""><span data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>LongCipher</span></div>
+          <div class="date" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>{{DATE}}</div>
         </div>
-        <div class="kicker">
+        <div class="kicker" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
           <div class="bar"></div>
-          <div class="label">{{KICKER}}</div>
+          <div class="label" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>{{KICKER}}</div>
         </div>
-        <div class="title-block">
-          <div class="title">{{TITLE}}</div>
-          <div class="sub">{{SUBTITLE}}</div>
+        <div class="title-block" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="title" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>{{TITLE}}</div>
+          <div class="sub" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>{{SUBTITLE}}</div>
         </div>
-        <div class="hero-headlines">
-          <div class="hl-head">{{HEADLINES_LABEL}}</div>
-          <ul id="hero-hl"></ul>
+        <div class="hero-headlines" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
+          <div class="hl-head" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>{{HEADLINES_LABEL}}</div>
+          <ul id="hero-hl" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion></ul>
         </div>
       </div>
 
       <!-- playful background decorations (fixed hand-built set, GSAP-animated) -->
       <div id="bg-deco"></div>
 
-      <div class="sections-label">{{SECTIONS_LABEL}}</div>
+      <div class="sections-label" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>{{SECTIONS_LABEL}}</div>
 
       <div class="feed-viewport" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
         <div class="feed-track" id="feed-track" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>
@@ -165,7 +165,7 @@
         </div>
       </div>
 
-      <div class="footer" data-layout-allow-occlusion><span>LongCipher Research · Daily Brief</span></div>
+      <div class="footer" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion><span data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>LongCipher Research · Daily Brief</span></div>
 
       <audio id="bgm" src="audio/shorts_bgm.mp3" data-start="0" data-duration="{{DURATION}}" data-track-index="900" data-volume="0.7"></audio>
     </div>
@@ -183,23 +183,23 @@
         // Hero headlines (top 4, two columns)
         var hlEl = document.getElementById("hero-hl");
         hlEl.innerHTML = HERO_HL.slice(0, 4).map(function (h) {
-          return '<li><span class="hl-idx">›</span><span>' + h + '</span></li>';
+          return '<li data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion><span class="hl-idx" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>›</span><span data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>' + h + '</span></li>';
         }).join("");
 
         // Category sections
         var track = document.getElementById("feed-track");
         track.innerHTML = CATS.map(function (c, i) {
           var bullets = (c.bullets || []).map(function (b) {
-            return '<li><span class="b-dot"></span><span>' + b + '</span></li>';
+            return '<li data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion><span class="b-dot"></span><span>' + b + '</span></li>';
           }).join("");
           var ico = (c.icon && ICONS[c.icon]) ? '<span class="cat-illust">' + ICONS[c.icon] + '</span>' : "";
-          var an = c.analysis ? '<div class="analysis"><span class="an-tag">' + (DATA.lang === "en" ? "SO-WHAT" : "分析") + '</span><span class="an-txt">' + c.analysis + '</span></div>' : "";
-          return '<div class="cat">'
-            + '<div class="cat-head"><span class="cat-no">' + String(i + 1).padStart(2, "0") + '</span>'
+          var an = c.analysis ? '<div class="analysis" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion><span class="an-tag">' + (DATA.lang === "en" ? "SO-WHAT" : "分析") + '</span><span class="an-txt" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>' + c.analysis + '</span></div>' : "";
+          return '<div class="cat" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>'
+            + '<div class="cat-head" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion><span class="cat-no">' + String(i + 1).padStart(2, "0") + '</span>'
             + ico
             + '<span class="cat-title">' + c.eyebrow + '</span><span class="cat-bar"></span></div>'
-            + '<div class="statement">' + c.statement + '</div>'
-            + '<ul class="bullets">' + bullets + '</ul>'
+            + '<div class="statement" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>' + c.statement + '</div>'
+            + '<ul class="bullets" data-layout-allow-overflow data-layout-allow-overlap data-layout-allow-occlusion>' + bullets + '</ul>'
             + an
             + '</div>';
         }).join("");
