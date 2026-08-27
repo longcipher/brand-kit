@@ -117,7 +117,7 @@
       <div id="bg-deco"></div>
 
       <!-- Layer 1 — persistent brand header (lockup + date + progress bar) -->
-      <div id="header" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="7" aria-hidden="true">
+      <div id="header" class="clip" data-start="0" data-duration="{{DURATION}}" data-track-index="7" data-layout-allow-overlap aria-hidden="true">
         <div class="hd-lockup"><img src="logos/lc.svg" alt=""><span>LongCipher</span></div>
         <div class="hd-meta"><span class="hd-date"></span><span class="hd-kicker"></span></div>
         <div class="hd-progress"><div class="hd-progress-fill"></div></div>
@@ -332,7 +332,7 @@
         var n = i + 1;
         var sStart = s._start != null ? s._start : 0;
         var sEnd   = s._end   != null ? s._end   : sStart + 8;
-        var sAttrs = ' data-start="'+sStart+'" data-end="'+sEnd+'"';
+        var sAttrs = ' data-start="'+sStart+'" data-end="'+sEnd+'" data-layout-allow-overlap';
         var visual = visualHTML(s);
         var hasVisual = visual ? " has-visual" : "";
         if (s.type === "keypoint") {
@@ -959,26 +959,26 @@
       .slide .meta-row .center-bar { flex:1; height:1px; margin:0 18px; background:var(--line); }
       /* keypoint */
       .slide .accent-rule { position:absolute; left:8%; top:22%; width:3px; height:56%; background:var(--accent); z-index:1; }
-      .slide .stage { position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; justify-content:center; padding:0 14%; }
+      .slide .stage { position:absolute; top:104px; bottom:40px; left:0; right:0; z-index:3; display:flex; flex-direction:column; justify-content:center; padding:0 14%; }
       .slide.has-illust .stage { padding-right: 24%; }
       .slide.has-illust .statement, .slide.has-illust .support, .slide.has-illust .bullets,
       .slide.has-illust .analysis, .slide.has-illust .callbacks { max-width: 1080px; }
       /* two-column keypoint: left 40% text, right 60% visualizer */
-      .slide.has-visual .stage { left:0; width:40%; padding:0 0 0 8%; }
+      .slide.has-visual .stage { left:0; width:40%; top:104px; bottom:40px; padding:0 0 0 8%; }
       .slide.has-visual .visual { position:absolute; right:6%; top:50%; transform:translateY(-50%);
         width:52%; z-index:4; }
       .slide.has-visual .idx-tag { right:6%; }
-      .slide .eyebrow { font-family:"JetBrains Mono",monospace; font-size:20px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:28px; display:flex; align-items:center; gap:14px; }
+      .slide .eyebrow { font-family:"JetBrains Mono",monospace; font-size:19px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent-text); margin-bottom:20px; display:flex; align-items:center; gap:14px; }
       .slide .eyebrow::before { content:""; width:28px; height:2px; background:var(--accent); }
-      .slide .statement { font-size:60px; font-weight:700; line-height:1.22; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
+      .slide .statement { font-size:52px; font-weight:700; line-height:1.2; letter-spacing:-0.02em; color:var(--ink); max-width:1500px; }
       /* kinetic typography highlight (L3) — `**keyword**` in copy */
       .kt-hl { color:var(--accent-text); background:var(--accent-soft); border-bottom:2px solid var(--accent); padding:0 2px; border-radius:2px; }
-      .slide .support { margin-top:30px; font-size:26px; font-weight:400; color:var(--ink-300); line-height:1.45; max-width:1200px; font-family:"JetBrains Mono",monospace; letter-spacing:.02em; }
-      .slide .body { margin-top:28px; display:flex; flex-direction:column; gap:14px; max-width:1300px; }
-      .slide .body-para { font-size:24px; font-weight:400; color:var(--ink-200); line-height:1.55; margin:0; }
+      .slide .support { margin-top:22px; font-size:23px; font-weight:400; color:var(--ink-300); line-height:1.4; max-width:1200px; font-family:"JetBrains Mono",monospace; letter-spacing:.02em; }
+      .slide .body { margin-top:20px; display:flex; flex-direction:column; gap:12px; max-width:1300px; }
+      .slide .body-para { font-size:21px; font-weight:400; color:var(--ink-200); line-height:1.5; margin:0; }
       .slide.has-illust .body { max-width:1080px; }
-      .slide .bullets { list-style:none; margin-top:34px; display:grid; gap:16px; max-width:1240px; }
-      .slide .bullets li { display:flex; align-items:baseline; gap:16px; font-size:25px; line-height:1.42; color:var(--ink-200); }
+      .slide .bullets { list-style:none; margin-top:22px; display:grid; gap:12px; max-width:1240px; }
+      .slide .bullets li { display:flex; align-items:baseline; gap:16px; font-size:22px; line-height:1.38; color:var(--ink-200); }
       .slide .bullets .b-dot { flex:0 0 auto; width:9px; height:9px; margin-top:11px; background:var(--accent); border-radius:2px; }
       .slide .bullets .b-txt { flex:1; }
       .slide .idx-tag { position:absolute; right:8%; bottom:10%; z-index:3; font-family:"JetBrains Mono",monospace; font-size:18px; color:var(--ink-300); letter-spacing:.12em; }
@@ -1047,14 +1047,14 @@
         border-radius:16px; box-shadow:var(--shadow-rest); }
       .slide .illust svg { width:104px; height:104px; }
       /* analysis chip — the "so what" layer, distinct from the fact bullets */
-      .slide .analysis { margin-top:26px; max-width:1240px; display:flex; align-items:flex-start; gap:16px;
+      .slide .analysis { margin-top:18px; max-width:1240px; display:flex; align-items:flex-start; gap:16px;
         background:var(--accent-soft); border-left:3px solid var(--accent);
-        padding:16px 22px; border-radius:2px; }
+        padding:14px 20px; border-radius:2px; }
       .slide .analysis .an-tag { flex:0 0 auto; font-family:"JetBrains Mono",monospace; font-size:15px;
         letter-spacing:.12em; text-transform:uppercase; color:#0a5fc4; padding-top:5px; }
-      .slide .analysis .an-txt { font-size:23px; font-weight:500; line-height:1.45; color:var(--ink); }
+      .slide .analysis .an-txt { font-size:21px; font-weight:500; line-height:1.42; color:var(--ink); }
       /* callback tags — the "links to earlier chapters" connective tissue */
-      .slide .callbacks { margin-top:22px; display:flex; flex-wrap:wrap; gap:10px; max-width:1240px; }
+      .slide .callbacks { margin-top:16px; display:flex; flex-wrap:wrap; gap:10px; max-width:1240px; }
       .slide .cb-tag { display:inline-flex; align-items:center; gap:8px;
         font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.03em;
         color:var(--ink-300); border:1px solid var(--line); border-radius:2px; padding:7px 12px;
