@@ -76,12 +76,13 @@ def _validate_dialogue(podcast, key: str, errors: list[str]) -> None:
                 )
             else:
                 # Character-bag Jaccard similarity catches paraphrased duplicates
+                # ponytail: 0.70 overflags English (shared alphabet); 0.92 still catches true near-dup
                 set_a, set_b = set(norm), set(prev_norm)
                 jaccard = len(set_a & set_b) / len(set_a | set_b) if (set_a | set_b) else 0
                 # Also check: shorter fully contained in longer (with gap tolerance)
                 shorter, longer = (norm, prev_norm) if len(norm) <= len(prev_norm) else (prev_norm, norm)
                 containment = shorter in longer
-                if jaccard > 0.70 or (containment and len(shorter) / len(longer) > 0.75):
+                if jaccard > 0.92 or (containment and len(shorter) / len(longer) > 0.75):
                     errors.append(
                         f"{key}[{i}] is a NEAR-DUPLICATE of {key}[{prev_idx}] "
                         f"(similarity {jaccard:.0%}). Remove or substantially rephrase."
