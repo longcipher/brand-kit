@@ -19,6 +19,7 @@ To render all four ratios, loop in the shell:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import shutil
 import subprocess
@@ -63,15 +64,11 @@ def render_one(project: Path, src_name: str, output: Path, width: str, height: s
 
     def cleanup() -> None:
         if created_tmp_index:
-            try:
+            with contextlib.suppress(BaseException):
                 (project / "index.html").unlink(missing_ok=True)
-            except BaseException:
-                pass
         if index_backup is not None and index_backup.exists():
-            try:
+            with contextlib.suppress(BaseException):
                 shutil.move(index_backup, project / "index.html")
-            except BaseException:
-                pass
 
     tmp_mp4 = project / f"_cover_{src.stem}.mp4"
     sys.stdout.write(f"· rendering {src_name} (standard)…\n")
@@ -115,10 +112,8 @@ def render_one(project: Path, src_name: str, output: Path, width: str, height: s
     )
     # Best-effort cleanup of the temp render; never let a guarded delete
     # (e.g. bulk-delete protection in some sandboxes) abort the render.
-    try:
+    with contextlib.suppress(BaseException):
         tmp_mp4.unlink(missing_ok=True)
-    except BaseException:
-        pass
     if grab.returncode != 0:
         cleanup()
         die("ffmpeg frame extraction failed")

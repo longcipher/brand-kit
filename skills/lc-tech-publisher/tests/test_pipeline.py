@@ -51,6 +51,10 @@ VALID_SCRIPT = {
             "eyebrow": "核心观点",
             "icon": "spark",
             "statement": "市场进入横盘,但结构性信号在累积。",
+            "body": [
+                "2024年比特币矿工收入结构发生了根本性变化:交易手续费占比从上一轮牛市的15%降至不足3%。",
+                "与此同时,AI算力租赁收入首次占到头部矿企总营收的20%以上,财报都验证了这一趋势。",
+            ],
             "analysis": "价格只是表层,真正的变化在结构与机制。",
             "callback": ["呼应开场:宏观压力是今天的暗线"],
             "bullets": ["事实一", "事实二"],
@@ -71,6 +75,10 @@ VALID_SCRIPT = {
             "eyebrow": "Core Point",
             "icon": "rocket",
             "statement": "Market chops sideways, but structural signals build.",
+            "body": [
+                "Miner fee revenue share fell from 15% in the last bull market to under 3%, reshaping the cost base.",
+                "AI compute leasing now tops 20% of revenue at major miners, confirming the infrastructure re-rate.",
+            ],
             "analysis": "Price is the surface; structure is the story.",
             "bullets": ["Fact one", "Fact two"],
         },
@@ -190,6 +198,10 @@ def test_build_composition_visualizers(work: Path) -> None:
             "type": "keypoint",
             "eyebrow": "行情",
             "statement": "链上余额累积。",
+            "body": [
+                "交易所余额连续三个月净流出,巨鲸地址在横盘区间持续吸筹。",
+                "稳定币供应量回升,为下一轮波动储备了足够的场外购买力。",
+            ],
             "visual": "metric_chart",
             "chart": {
                 "title": "BTC 余额",

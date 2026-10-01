@@ -65,7 +65,7 @@ def _split_turn_cues(turn: dict, lang: str) -> list[dict]:
     out: list[dict] = []
     cursor = start
     speaker = turn.get("speaker")
-    for c, w in zip(cues_text, weights):
+    for c, w in zip(cues_text, weights, strict=True):
         dur = span * (w / total_w)
         seg_end = cursor + dur
         out.append({
@@ -175,10 +175,7 @@ def main() -> None:
     for i in range(n):
         s_start, s_end = windows[i]
         s_start = round(max(s_start, HERO_DURATION if i == 0 else windows[i - 1][1]), 3)
-        if i < n - 1:
-            s_end = max(s_end, windows[i + 1][0])
-        else:
-            s_end = max(s_end, total)
+        s_end = max(s_end, windows[i + 1][0] if i < n - 1 else total)
         # never let a slide be shorter than a minimum so content is readable
         s_end = max(s_end, s_start + 1.0)
         windows[i] = (s_start, round(s_end, 3))

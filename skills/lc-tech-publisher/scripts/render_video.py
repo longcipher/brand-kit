@@ -53,7 +53,7 @@ def build_srt(timestamps: dict, lang: str) -> str:
         weights = [len(c) for c in cues]
         total_w = sum(weights) or 1
         cursor = start
-        for c, w in zip(cues, weights):
+        for c, w in zip(cues, weights, strict=True):
             dur = span * (w / total_w)
             seg_end = cursor + dur
             blocks.append(
@@ -80,9 +80,7 @@ def _skip_srt(project: Path, audio_only: bool) -> bool:
     The main explainer video keeps it. `--srt-only` mode opts back in."""
     if audio_only:
         return True
-    if "shorts" in project.name:
-        return True
-    return False
+    return "shorts" in project.name
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:

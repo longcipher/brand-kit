@@ -110,7 +110,7 @@ def main() -> None:
             "ok": edge_mod,
             "detail": "edge_tts installed"
             if edge_mod
-            else "pip install edge-tts (needs internet at synth time)",
+            else "`uv sync` (needs internet at synth time)",
         }
 
     if check_cosy:

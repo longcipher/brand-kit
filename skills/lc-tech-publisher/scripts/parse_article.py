@@ -119,6 +119,10 @@ VALID_SLIDE_TYPES = {
     "cards", "steps", "metric_chart", "pipeline", "benchmark", "security", "terminal",
 }
 
+# Content-aware visualizers (standalone slide types, or the `visual` field on a
+# keypoint). Data lives in a sibling field named after the visualizer key.
+VISUALIZER_TYPES = {"metric_chart", "pipeline", "benchmark", "security", "terminal"}
+
 # Fixed cute-illustration catalog (must match `ICONS` in dashboard.html /
 # shorts.html). The LLM picks a key; unknown keys fall back to "spark".
 VALID_ICONS = {
@@ -132,6 +136,59 @@ VALID_EMOTIONS = {
     "neutral", "calm", "serious", "curious", "excited", "surprised",
     "warm", "doubtful", "relieved", "emphatic",
 }
+
+
+def _validate_visualizer(vtype: str, payload: dict, where: str, errors: list[str]) -> None:
+    """Validate one visualizer payload (the data object, not the slide wrapper)."""
+    if not isinstance(payload, dict):
+        errors.append(f"{where} ({vtype}) data must be an object")
+        return
+    if vtype == "metric_chart":
+        chart = payload.get("chart") if "chart" in payload else payload
+        if not isinstance(chart, dict):
+            errors.append(f"{where}: metric_chart needs a `chart` object")
+            return
+        pts = chart.get("points")
+        labels = chart.get("labels")
+        if not isinstance(pts, list) or len(pts) < 2:
+            errors.append(f"{where}: metric_chart.chart.points must be a list of ≥2 numbers")
+        if not isinstance(labels, list) or not labels:
+            errors.append(f"{where}: metric_chart.chart.labels must be a non-empty list")
+    elif vtype == "pipeline":
+        pipe = payload.get("pipeline") if "pipeline" in payload else payload
+        if not isinstance(pipe, dict) or not isinstance(pipe.get("nodes"), list) or not pipe.get("nodes"):
+            errors.append(f"{where}: pipeline needs a non-empty `nodes` array")
+    elif vtype == "benchmark":
+        bench = payload.get("benchmark") if "benchmark" in payload else payload
+        if not isinstance(bench, dict) or not isinstance(bench.get("bars"), list) or not bench.get("bars"):
+            errors.append(f"{where}: benchmark needs a non-empty `bars` array")
+        else:
+            for j, b in enumerate(bench["bars"]):
+                if not isinstance(b, dict) or not b.get("label") or b.get("value") is None:
+                    errors.append(f"{where}: benchmark.bars[{j}] needs label + value")
+    elif vtype == "security":
+        sec = payload.get("security") if "security" in payload else payload
+        if not isinstance(sec, dict) or sec.get("cvss") is None:
+            errors.append(f"{where}: security needs a numeric `cvss` score")
+    elif vtype == "terminal":
+        term = payload.get("terminal") if "terminal" in payload else payload
+        if not isinstance(term, dict) or not isinstance(term.get("lines"), list) or not term.get("lines"):
+            errors.append(f"{where}: terminal needs a non-empty `lines` array")
+
+
+def _validate_visual_payload(s: dict, where: str, errors: list[str]) -> None:
+    """A keypoint may set `visual` to a visualizer key; then the sibling field
+    of that name must hold the data."""
+    vis = s.get("visual")
+    if vis is None:
+        return
+    if vis not in VISUALIZER_TYPES:
+        errors.append(f"{where}.visual must be one of {sorted(VISUALIZER_TYPES)} (got {vis!r})")
+        return
+    if s.get(vis) is None:
+        errors.append(f"{where}: visual={vis!r} requires a sibling `{vis}` data object")
+        return
+    _validate_visualizer(vis, s[vis], where, errors)
 
 
 def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> None:
@@ -168,10 +225,17 @@ def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> N
                 errors.append(f"{key}[{i}].statement is required for keypoint slides")
             body = s.get("body")
             if not body or (isinstance(body, list) and len(body) < 2):
-                warns.append(
-                    f"{key}[{i}] (keypoint) has no/insufficient `body` — add 2–4 detail paragraphs "
+                errors.append(
+                    f"{key}[{i}] (keypoint) must include `body` with 2–4 detail paragraphs "
                     f"so the slide has substantive content matching the narration"
                 )
+            elif isinstance(body, list):
+                for j, para in enumerate(body):
+                    if not isinstance(para, str) or len(para.strip()) < 10:
+                        errors.append(
+                            f"{key}[{i}].body[{j}] must be a substantive paragraph (not a stub)"
+                        )
+            _validate_visual_payload(s, f"{key}[{i}]", errors)
         elif stype == "three_points":
             pts = s.get("points")
             if not isinstance(pts, list) or len(pts) != 3:
@@ -220,6 +284,8 @@ def _validate_panels(slides, key: str, errors: list[str], warns: list[str]) -> N
                 for j, st in enumerate(steps):
                     if not isinstance(st, dict) or not st.get("title") or not st.get("body"):
                         errors.append(f"{key}[{i}].steps[{j}] needs title + body")
+        elif stype in VISUALIZER_TYPES:
+            _validate_visualizer(stype, s, f"{key}[{i}]", errors)
         elif stype == "outro":
             if not s.get("recap"):
                 errors.append(f"{key}[{i}].recap is required for outro slides")
@@ -351,8 +417,7 @@ def validate_mode(path: str) -> None:
                     # Skip generic boilerplate that appears everywhere.
                     stopwords = {"核心更新", "相关链接", "核心逻辑", "核心观点", "核心内容",
                                  "核心实测", "具体介绍", "具体要求", "联系方式", "工作形式",
-                                 "岗位需求", "招聘方", "核心能力", "人才背景", "相关链接",
-                                 "时报报道", "官方博客", "深度解析", "深度报道", "实战经验"}
+                                 "岗位需求", "招聘方", "核心能力", "人才背景", "时报报道", "官方博客", "深度解析", "深度报道", "实战经验"}
                     topic_keywords: list[str] = []
                     for para in sec_paras:
                         para_clean = _clean_md(para)

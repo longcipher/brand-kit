@@ -15,10 +15,8 @@ import re
 def _split_sentences(text: str, lang: str) -> list[str]:
     """Split into atomic sentences on STRONG punctuation only (. ! ? 。 ！ ？),
     keeping the delimiter. Each returned piece is a self-contained sentence."""
-    if lang == "en":
-        parts = re.split(r"(?<=[.!?])\s*", text)
-    else:
-        parts = re.split(r"(?<=[。！？])", text)
+    pattern = r"(?<=[.!?])\s*" if lang == "en" else r"(?<=[。！？])"
+    parts = re.split(pattern, text)
     return [p.strip() for p in parts if p.strip()]
 
 

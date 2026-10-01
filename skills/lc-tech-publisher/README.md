@@ -1,6 +1,6 @@
 # LongCipher Tech Publisher
 
-一个可安装的 Agent Skill:把一篇文章自动转成 LongCipher 品牌媒体包 —— **4 种比例封面图(16:9 / 9:16 / 4:3 / 3:4)× 中英双版 + 双人对话播客 MP3(中英双版) + 浅色"固定组件"口播讲解视频(中英双版)**。中文配音默认用 **Microsoft Edge Neural TTS 双人声**(男 `zh-CN-YunxiNeural` + 女 `zh-CN-XiaoxiaoNeural`);英文版统一用 `en-US-AndrewNeural`(单声线)。均免费、零 API key、无需参考录音,需联网 + `pip install edge-tts`;可选切换本地 **Fun-CosyVoice3-0.5B** 做品牌声线克隆。
+一个可安装的 Agent Skill:把一篇文章自动转成 LongCipher 品牌媒体包 —— **4 种比例封面图(16:9 / 9:16 / 4:3 / 3:4)× 中英双版 + 双人对话播客 MP3(中英双版) + 浅色"固定组件"口播讲解视频(中英双版)**。中文配音默认用 **Microsoft Edge Neural TTS 双人声**(男 `zh-CN-YunxiNeural` + 女 `zh-CN-XiaoxiaoNeural`);英文版统一用 `en-US-AndrewNeural`(单声线)。均免费、零 API key、无需参考录音,需联网 + `uv sync`;可选切换本地 **Fun-CosyVoice3-0.5B** 做品牌声线克隆。
 
 ## 核心策略 — 固定模板 + JSON-only 生成
 

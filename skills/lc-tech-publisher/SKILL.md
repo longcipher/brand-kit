@@ -1,6 +1,6 @@
 ---
 name: lc-tech-publisher
-description: Turn an article into a complete LongCipher-branded media package — 4 aspect-ratio cover images (16:9, 9:16, 4:3, 3:4), a two-speaker dialogue podcast MP3, and a LIGHT "fixed-component" narrated explainer video — built with HyperFrames. Use when the user provides an article (technical knowledge content, docs, blog post, paper notes, market/quant brief) and wants cover / podcast / video output in the LongCipher design system. The LLM only writes structured JSON (podcast turns + slide data); all visual styling is hand-built into four fixed component templates (cover card / keypoint / 3-point summary / outro) so visual quality is 100% controlled and reproducible. Narration uses Microsoft Edge Neural TTS by default (two voices — zh-CN-YunxiNeural male + zh-CN-XiaoxiaoNeural female, no API key, no reference voice — needs internet + `pip install edge-tts`); an optional local Fun-CosyVoice3-0.5B backend provides brand-voice cloning. Video + cover render deterministically with npx hyperframes. Outputs land in output/ as cover_*.png, podcast_full.mp3, and explainer_video.mp4. The skill is domain-agnostic: same visual quality for knowledge share or daily digest content.
+description: Turn an article into a LongCipher-branded media package — bilingual (zh+en) cover PNGs in 4 aspect ratios, two-speaker dialogue podcast MP3s, narrated explainer videos, and 9:16 shorts — built with fixed HyperFrames templates. Use when the user provides an article (tech knowledge, docs, blog, paper notes, market/quant brief) and wants cover / podcast / video / shorts in the LongCipher design system. The LLM writes structured JSON only (13 slide types: keypoint, three_points, chart, counter, cards, steps, metric_chart, pipeline, benchmark, security, terminal, table, outro); all visual styling lives in hand-built templates so quality is reproducible. Narration defaults to Microsoft Edge Neural TTS (zh-CN-YunxiNeural + zh-CN-XiaoxiaoNeural, free, no API key, needs `uv sync` + internet); optional local Fun-CosyVoice3-0.5B brand-voice clone. Outputs land in output/ as cover_*.png, podcast_full*.mp3, explainer_video_*.mp4, shorts_*.mp4.
 ---
 
 # LongCipher Tech Publisher
@@ -208,7 +208,7 @@ uv run python scripts/parse_article.py --validate dist/script.json
 
 ## Step 3 — Generate Dialogue Audio & Timings
 
-Dialogue is synthesized with the **Edge Neural TTS backend by default** (two built-in voices: `zh-CN-YunxiNeural` male + `zh-CN-XiaoxiaoNeural` female, free, no API key, no reference voice — needs `pip install edge-tts` + internet). Pass `--tts cosyvoice` to switch to the local **Fun-CosyVoice3-0.5B** brand-voice clone. See `references/tts.md` for setup.
+Dialogue is synthesized with the **Edge Neural TTS backend by default** (two built-in voices: `zh-CN-YunxiNeural` male + `zh-CN-XiaoxiaoNeural` female, free, no API key, no reference voice — needs `uv sync` + internet). Pass `--tts cosyvoice` to switch to the local **Fun-CosyVoice3-0.5B** brand-voice clone. See `references/tts.md` for setup.
 
 Default (Edge) — run **twice**, once per language:
 
@@ -353,11 +353,11 @@ output/shorts_en.mp4         # en 1080×1920 vertical scrolling feed (10s, BGM)
 
 ## Implementation Rules
 
-- **Brand fidelity is non-negotiable.** Follow `references/brand-design.md` tokens exactly: light canvas `#fafbfc`, surface `#ffffff`, ink `#171718`, single brand blue `#0a72ef`, 2px ceiling on corner radius (no pills), shadow-as-border (layered `box-shadow`), DM Sans + JetBrains Mono. Never introduce a second hue. Keep the `lc.svg` mark as a low-opacity brand watermark.
+- **Brand fidelity is non-negotiable.** Follow `references/brand-design.md` tokens exactly: light canvas `#fafbfc`, surface `#ffffff`, ink `#171718`, single brand blue `#0a72ef` (text `#0a63d0`), 2px ceiling on UI corner radius (illustration chips ≤16px; diagram primitives may be round), shadow-as-border (layered `box-shadow`), DM Sans + JetBrains Mono. Never introduce a second hue. Keep the `lc.svg` mark as a low-opacity brand watermark.
 - **LLM writes JSON only.** Never author CSS, HTML, or animations. Add new visual variants by extending `cover.html` / `dashboard.html` (and its inline slide branches), not by generating ad-hoc styles from the LLM.
 - **Domain-agnostic.** Same visual quality for any content. The LLM's job is the copy; the templates' job is the look.
 - **Sync is exact.** Caption/audio element `data-duration` equals the turn audio duration from `speaker_timestamps.json`. Slide `data-start`/`data-duration` align to the same absolute timeline. Animation is compositor-only (transform/opacity), never layout-thrashing props.
 - **Caption = spoken text.** The `.cap` text and the spoken audio must be identical strings.
 - **Local-first TTS, no API keys.** Dialogue defaults to Microsoft Edge Neural TTS (two built-in voices, no reference voice, needs internet + `uv sync` to install `edge-tts`); the optional local Fun-CosyVoice3-0.5B brand-voice clone runs via `scripts/cosyvoice_tts.py`. Select with `--tts edge|cosyvoice`.
-- **Fonts are local-ish but CDN-loaded for render.** The light template loads DM Sans + JetBrains Mono from Google Fonts CDN. For production, bundle `.woff2` files into `assets/fonts/` and switch the `<link>` to a `@font-face` declaration.
+- **Fonts and GSAP are fully self-hosted.** `assets/fonts/*.woff2` + `assets/vendor/gsap.min.js` are copied into every build tree — **no CDN, no network at render time**. CJK glyphs fall back to the system stack (`PingFang SC` / `Microsoft YaHei` / `Noto Sans SC`) because the bundled faces are Latin subsets; keep that fallback in the templates.
 - **Reuse over rewrite.** Re-run `build_cover.py` / `build_composition.py` after data edits instead of hand-editing generated HTML.

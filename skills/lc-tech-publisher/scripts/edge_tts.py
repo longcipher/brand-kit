@@ -3,8 +3,8 @@
 
 This is one of the Python files in the LongCipher publisher skill. The TS
 pipeline calls it once per scene via subprocess (same pattern as calling
-ffmpeg or hyperframes). Edge TTS is a pure-Python package (pip install
-edge-tts) that streams from Microsoft's free online neural voices — **no
+ffmpeg or hyperframes). Edge TTS is a pure-Python package (installed via
+`uv sync`) that streams from Microsoft's free online neural voices — **no
 reference voice, no model download, no API key** — but it does require an
 internet connection at synth time.
 
@@ -89,7 +89,7 @@ def synth_one(text, out_path, voice, rate, volume):
     try:
         import edge_tts  # noqa: F401
     except Exception as e:  # pragma: no cover
-        die(f"edge_tts not installed (pip install edge-tts): {e}")
+        die(f"edge_tts not installed (run `uv sync`): {e}")
     return asyncio.run(_synth(text, out_path, voice, rate, volume))
 
 

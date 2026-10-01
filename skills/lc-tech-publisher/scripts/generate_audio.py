@@ -10,7 +10,7 @@ The script's `podcast[]` is a list of dialogue turns, each tagged
 Two TTS backends via --tts:
   • edge (DEFAULT)  — Microsoft Edge Neural TTS via scripts/edge_tts.py.
                        No reference voice, no model download, no API key;
-                       needs `pip install edge-tts` + internet.
+                       needs `uv sync` + internet.
   • cosyvoice       — local Fun-CosyVoice3-0.5B zero-shot voice cloning via
                        scripts/cosyvoice_tts.py. Needs your brand reference
                        voice (--prompt-wav) and the CosyVoice env.

@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import math
 import struct
 import subprocess
@@ -89,10 +90,7 @@ def tone(freq: float, t0: float, t: float, dur: float, kind: str, peak: float) -
     p = local / dur
     # plucky attack, smooth exponential decay
     a = 0.008
-    if p < a:
-        g = p / a
-    else:
-        g = math.exp(-3.2 * (local - a))
+    g = p / a if p < a else math.exp(-3.2 * (local - a))
     # subtle detune shimmer
     detune = 1.0 + 0.0025 * math.sin(2 * math.pi * 5.5 * local)
     return peak * g * osc(freq * detune, local, kind)
@@ -150,7 +148,6 @@ def main() -> None:
         if beat_in_bar < 0.16:
             samples[i] += kick(beat_in_bar)
         # hats on every 8th offbeat
-        off = (bar_t + step) % step  # position within the offbeat grid
         hat_local = bar_t - (math.floor(bar_t / step) + 0.5) * step
         if -0.001 < hat_local < 0.05:
             samples[i] += hat(hat_local if hat_local >= 0 else hat_local + step)
@@ -185,10 +182,8 @@ def main() -> None:
          "-qscale:a", "2", "-ar", "44100", str(out_path)],
         capture_output=True, text=True,
     )
-    try:
+    with contextlib.suppress(BaseException):
         wav_path.unlink(missing_ok=True)
-    except BaseException:
-        pass
     if res.returncode != 0:
         sys.stderr.write(f"! ffmpeg failed: {res.stderr}\n")
         sys.exit(1)
