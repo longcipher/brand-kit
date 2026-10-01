@@ -15,7 +15,9 @@
 - No purple/violet/indigo accents. One blue only — **this rule applies to all UI elements (lines, borders, text, fills). The brand logo mark is the single intentional exception: it is a fixed multicolor asset (see §13) and is never recolored.**
 - No "AI shimmer," no animated gradient borders, no autoplay motion.
 
-**Brand as mark, not decoration.** The LongCipher identity is carried by real vector marks (`lc.svg`, `lc11.svg`, `lc169.svg`, `lc31.svg`, `lc43.svg` at the repo root). The core mark is built from the letterforms with **K-line–inspired geometry** and uses a **fixed multicolor palette** (red `#FF0000`, green `#08C477`, dark `#2A2A2A`, light `#FAFAF9`) — this is an intentional brand asset, not a gradient blob. The `lc11/31/43/169` variants additionally embed the `LongCipher` wordmark (set in their own font/color). Use the marks **as-is**; never recolor, regradient, or wrap them in gradient containers. The video/cover lockup uses the pure mark `lc.svg` for the icon and renders the `LongCipher` wordmark in **DM Sans** via CSS (see the skill's `{{LOGO}}` + `.lockup span`), so do not substitute the embedded-text variants (`lc31/43/169`) for the lockup.
+**Brand as mark, not decoration.** The LongCipher identity is carried by real vector marks (`lc.svg`, `lc11.svg`, `lc169.svg`, `lc31.svg`, `lc43.svg` at the repo root). The core mark is built from the letterforms with **K-line–inspired geometry** and uses a **fixed multicolor palette** (red `#FF0000`, green `#08C477`, dark `#2A2A2A`, light `#FAFAF9`) — this is an intentional brand asset, not a gradient blob. The light `#FAFAF9` element is **negative space** between the K-line strokes: on a light canvas it reads as a gap matching the page; on dark surfaces it reads as a bright separator. Use the marks **as-is**; never recolor, regradient, or wrap them in gradient containers.
+
+Lockup variants (`lc11/31/43/169`) embed the `LongCipher` wordmark as **DM Sans 700 path outlines** (no system-font dependency) in brand blue `#0a72ef`, tracking `-0.02em`. The video/cover lockup uses the pure mark `lc.svg` for the icon and renders the `LongCipher` wordmark in **DM Sans 700** via CSS (see the skill's `{{LOGO}}` + `.lockup span`) — never JetBrains Mono, never a system font. Do not substitute the embedded-text variants (`lc31/43/169`) for the animated lockup.
 
 ---
 
@@ -29,9 +31,11 @@
 | Code / Data | **JetBrains Mono** | Technical identifiers, keys, tokens, tabular data |
 
 ```css
---font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+--font-sans: "DM Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", ui-sans-serif, system-ui, sans-serif;
 --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 ```
+
+- **CJK:** DM Sans is Latin-only. Chinese glyphs fall back to the system CJK face (PingFang SC / Microsoft YaHei / Noto Sans SC). Prefer loading a self-hosted Noto Sans SC / Source Han Sans subset when shipping Chinese UI copy, and list it **before** the generic `ui-sans-serif` fallback. Never let CJK land on a default serif.
 
 - Load with `rel="preload" as="font" font-display="swap"`.
 - Enable ligatures globally: `font-feature-settings: "liga" 1;`
@@ -69,11 +73,15 @@ code     0.875rem / 14px   400   —        mono data / identifiers
 
 ### Semantic
 
-| Token | Hex | Role |
-|-------|-----|------|
-| Primary Blue | `#0a72ef` | Actions, links, active states, focus |
-| Error Red | `#ff5b4f` | Errors, destructive actions, validation |
-| Focus Blue | `hsla(212,100%,48%,1)` | `:focus-visible` ring |
+| Token | Hex | Role | Contrast on `#fafbfc` |
+|-------|-----|------|----------------------|
+| Primary Blue | `#0a72ef` | Buttons, fills, focus ring, large text, non-text UI | 4.34:1 (AA large / UI 3:1) |
+| Accent Text | `#0a63d0` | **Links and blue body text** (AA on light) | 5.47:1 (AA) |
+| Error Red | `#ff5b4f` | Error icons, borders, large text only | 2.95:1 (not for body text) |
+| Error Text | `#c62d2d` | Error **message text** on light | 5.05:1 (AA) |
+| Focus Blue | `hsla(212,100%,48%,1)` | `:focus-visible` ring | 3:1 UI ✓ |
+
+**Contrast is a hard rule.** `#0a72ef` is **not** AA for normal-size text on the off-white canvas — use `#0a63d0` for any link or blue label under 24px. Same for errors: `#ff5b4f` is an ink/icon color only; error copy uses `#c62d2d`. Always verify with WCAG 2.x (4.5:1 body, 3:1 large/UI) before shipping.
 
 Use `:focus-within` to group focus on composite controls.
 
@@ -81,25 +89,46 @@ Use `:focus-within` to group focus on composite controls.
 
 The subtle tint creates subconscious harmony with the primary blue.
 
-| Scale | Hex | Role |
-|-------|-----|------|
-| 50  | `#ffffff` | Pure white cards |
-| 100 | `#f6f7f9` | Tinted off-white |
-| 200 | `#eceef2` | Light surfaces |
-| 300 | `#e0e2e8` | Borders, dividers |
-| 400 | `#b4b8c2` | Muted text |
-| 500 | `#888d98` | Secondary text |
-| 600 | `#6b6e75` | Body text on dark |
-| 700 | `#4e5159` | Headings on dark |
-| 800 | `#2a2d33` | Dark surfaces |
-| 900 | `#171718` | Primary text |
-| 950 | `#0a0a0c` | Dark backgrounds |
+| Scale | Hex | Role | Contrast on `#fafbfc` |
+|-------|-----|------|----------------------|
+| 50  | `#ffffff` | Pure white cards | — |
+| 100 | `#f6f7f9` | Tinted off-white | — |
+| 200 | `#eceef2` | Light surfaces | — |
+| 300 | `#e0e2e8` | Borders, dividers (non-text) | 1.30:1 |
+| 400 | `#b4b8c2` | Placeholder / disabled icons only (never readable copy) | 1.92:1 |
+| 500 | `#888d98` | Large secondary text (≥24px) or icons; not body copy | 3.21:1 |
+| 550 | `#565a63` | **Muted body text** on light (AA) | 6.67:1 |
+| 600 | `#6b6e75` | Secondary text on light (AA); body text on dark | 4.93:1 |
+| 700 | `#4e5159` | Headings on dark / secondary on light | 8.20:1 |
+| 800 | `#2a2d33` | Dark surfaces | — |
+| 900 | `#171718` | Primary text | 17.29:1 |
+| 950 | `#0a0a0c` | Dark backgrounds | — |
+
+**Readable-text floor:** anything a user must read at body size lives at scale ≥550 (`#565a63`) on light, or ≥600 on white. 400/500 are for decoration, placeholders, and large type only.
+
+### Dark Theme
+
+| Token | Light | Dark |
+|-------|-------|------|
+| Canvas | `#fafbfc` | `#0a0a0c` |
+| Surface | `#ffffff` | `#2a2d33` |
+| Ink | `#171718` | `#ededed` |
+| Ink secondary | `#4e5159` | `#b4b8c2` |
+| Ink muted | `#565a63` | `#888d98` |
+| Line | `#e0e2e8` | `#3a3e46` |
+| Accent | `#0a72ef` | `#3d8bff` (slightly lifted for dark AA) |
+| Accent text | `#0a63d0` | `#7eb0ff` |
+| Error text | `#c62d2d` | `#ff8a80` |
+| Shadows | black/alpha stack | white/alpha stack |
+
+Focus ring (dark): `0 0 0 1px hsla(212,100%,62%,1), 0 0 0 4px hsla(212,100%,62%,0.22)`.
+The brand **mark keeps its fixed multicolor palette in both themes** — `#FAFAF9` light gaps become the bright separator on dark. Never invent a "dark logo".
 
 ### Rules
-- **One accent only.** Blue is the single brand color. Never introduce a second hue for decoration.
-- **No rainbow / mesh gradients.** Backgrounds are solid off-white. The brand mark is monochrome.
+- **One accent only.** Blue is the single UI brand color. Never introduce a second hue for decoration. The brand **mark** is the single intentional exception: a fixed multicolor K-line asset (red/green/dark/light) — never recolor it (see §13).
+- **No rainbow / mesh gradients.** Backgrounds are solid off-white (or solid dark-950 in dark theme).
 - **State contrast:** `:hover`, `:active`, `:focus` must be visibly higher-contrast than rest. Never rely on color alone — always pair with a text label or icon.
-- **Browser theming:** `<meta name="theme-color" content="#fafbfc">`. For dark themes set `color-scheme: dark` on `<html>`.
+- **Browser theming:** `<meta name="theme-color" content="#fafbfc">` (dark: `#0a0a0c`). For dark themes set `color-scheme: dark` on `<html>`.
 
 ---
 
@@ -118,7 +147,11 @@ The subtle tint creates subconscious harmony with the primary blue.
 
 **Nested radii rule:** child radius ≤ parent radius, and concentric so curves align mathematically. With a 2px system this is trivially satisfied.
 
-Do **not** use 6/8/12/16px radii, full-round pills, or circular avatars anywhere in this system.
+Do **not** use 6/8/12/16px radii, full-round pills, or circular avatars on **UI surfaces** (cards, inputs, buttons, chips, modals, tooltips).
+
+**Two documented exceptions** (everything else stays at 2px):
+1. **Illustration chips** (the cute flat icon plates in the media skill): up to `16px`, chip only — the icon art is allowed rounded forms. UI chrome around it stays 2px.
+2. **Diagram primitives** inside charts/flows (process-node rings, connection dots, pulse dots, terminal traffic-light dots): `border-radius: 50%` is allowed as *diagram language*, not UI chrome. The container/surface around a diagram still uses 2px.
 
 ---
 
@@ -198,7 +231,7 @@ Rules:
 - **Numbers & units:** numerals for counts ("8 deployments"). Non-breaking space between number and unit (`10&nbsp;MB`, `⌘&nbsp;K`).
 - **Punctuation:**
   - Real ellipsis `…`, not `...`.
-  - Curly quotes `“ ”` over straight `" "`.
+  - Curly quotes `“ ”` over straight `" "` (this document uses them in prose examples).
   - `&` over `and` where space-constrained.
 - **Action-oriented ambiguity:** buttons specific ("Save API Key").
 - **Constructive errors:** guide the exit, don't just state the problem. "Your API key is incorrect. Generate a new key in settings."
@@ -206,7 +239,23 @@ Rules:
 
 ---
 
-## 8. Layout & Performance
+## 8. Layout, Spacing & Performance
+
+### Spacing rhythm
+
+```
+Base unit:  4px
+Scale:      4  8  12  16  24  32  48  64  96
+Group:      8px  →  16px  →  32px   (three-step: tight / related / section)
+```
+
+- Micro (label↔control): `4–8px`.
+- Related items in a card: `12–16px`.
+- Between cards / sections: `24–32px`.
+- Page gutters: `24px` mobile, `32–48px` desktop.
+- Never use arbitrary values like `7px` / `13px` / `22px` — snap to the scale.
+
+### Layout & performance
 
 - **Let the browser size things:** prefer Flex/Grid over JS measurement. Avoid layout reads in render (`getBoundingClientRect`, `offsetHeight`).
 - **`min-w-0`** on flex children to allow text truncation.
@@ -269,10 +318,12 @@ Rules:
   --color-canvas: #fafbfc;
   --color-surface: #ffffff;
   --color-blue: #0a72ef;
+  --color-blue-text: #0a63d0;
   --color-error: #ff5b4f;
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-error-text: #c62d2d;
+  --font-sans: "DM Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --radius-sm: 2px; /* the only radius in the system */
+  --radius-sm: 2px; /* the only UI radius in the system */
 }
 ```
 
@@ -280,7 +331,7 @@ Rules:
 - *"Create a form input. Explicit `<label>`, input font-size 16px (mobile safe), `autocomplete='off'`, placeholder ending in `…` with example pattern, allows paste, validates on submit. Focus uses shadow-based ring (no `outline:none` without replacement). Radius 2px."*
 - *"Design a settings card. Shadow-as-border `box-shadow: 0 0 0 1px rgba(23,23,23,0.08)`. Labels DM Sans 600. Data values JetBrains Mono. Radius 2px, sharp corners."*
 - *"Build a nav bar. Brand name DM Sans 700, tracking -0.02em. Nav links DM Sans 500, tracking -0.01em. Single blue accent `#0a72ef`."*
-- *"Render the LongCipher mark from `lc.svg` as a monochrome logo. No gradient wrapper, no glow."*
+- *"Render the LongCipher mark from `lc.svg` as-is — fixed multicolor K-line palette, never recolored, never monochrome-forced. No gradient wrapper, no glow."*
 
 ---
 
@@ -288,12 +339,53 @@ Rules:
 
 Real vector marks at repo root (use as-is, **fixed multicolor K-line palette**, no gradient containers, never recolor):
 
-| File | Use |
-|------|-----|
-| `lc.svg` | Pure mark (no text) — used as the video/cover lockup icon |
-| `lc11.svg` | 1:1 variant with embedded `LongCipher` wordmark |
-| `lc31.svg` | 3:1 variant with embedded wordmark + slogan |
-| `lc43.svg` | 4:3 variant with embedded wordmark + slogan |
-| `lc169.svg` | 16:9 variant with embedded wordmark + slogan |
+| File | Size | Use |
+|------|------|-----|
+| `lc.svg` | 1024×1024 | Pure mark (no text) — primary asset; video/cover lockup icon, favicons, avatars |
+| `lc11.svg` | 1024×1024 | 1:1 mark + `LongCipher` wordmark (DM Sans paths, `#0a72ef`) |
+| `lc31.svg` | 1800×600 | 3:1 lockup + slogan "AI NATIVE PAYMENT AND TRADING" |
+| `lc43.svg` | 2400×1800 | 4:3 lockup + slogan |
+| `lc169.svg` | 3200×1800 | 16:9 lockup + slogan (hero / social header) |
 
-These replace the old mesh-gradient blob logo. They are the brand; treat them as precise geometry, not decoration. The embedded-wordmark variants (`lc11/31/43/169`) are for static placements (page headers, social avatars) — **the animated video/cover lockup uses `lc.svg` (pure mark) + a DM Sans `LongCipher` rendered by CSS, not an embedded-text variant.**
+All five share one geometry, one light fill (`#FAFAF9`), one wordmark color (`#0a72ef`), and DM Sans **path outlines** (no `font-family` dependency — identical on every OS). They carry `role="img"` + `<title>`. Rebuild with `scripts/rebuild_logos.py`.
+
+### Fixed mark palette (never recolor)
+
+| Role | Hex | Note |
+|------|-----|------|
+| Light / negative space | `#FAFAF9` | Gap between K-line strokes. Reads as page gap on light; bright separator on dark. |
+| Dark stroke | `#2A2A2A` | |
+| Red stroke | `#FF0000` | |
+| Green accent | `#08C477` | Small square only — never a status color (fails AA on light). |
+| Wordmark / slogan | `#0a72ef` | The single UI accent. Slogan at `0.72` opacity. |
+
+### Clearspace & minimum size
+
+- **Clearspace:** leave at least **½ the mark height** of empty space on every side of the mark, or **cap-height of the wordmark** for lockups. Nothing (text, rules, UI chrome) enters that zone.
+- **Minimum sizes:** pure mark `lc.svg` ≥ **16px** (favicon extreme) / **24px** preferred. Lockups with wordmark ≥ **32px** tall for `lc11`; `lc31`/`lc169` ≥ **120px** wide.
+- Below 16px, use `lc.svg` alone — never stack a wordmark under 12px cap height.
+
+### Misuse (never)
+
+- Recolor, monochrome-force, invert, or add gradients/glows/shadows to the mark.
+- Stretch, rotate, skew, or crop the hexagon.
+- Substitute a system font for the wordmark (lockups already ship as paths — do not re-typeset).
+- Use `lc11/31/43/169` as the animated video lockup icon (use `lc.svg` + CSS wordmark).
+- Place the mark on a busy photo without a solid plate or sufficient clearspace.
+- Use `#08C477` green as a UI status color (contrast 2.21:1 on light — decorative only).
+
+### Favicon / app icon set (ship alongside)
+
+| File | Size | Notes |
+|------|------|-------|
+| `favicon.svg` | vector | `lc.svg` (optionally with `prefers-color-scheme` light-gaps tweak) |
+| `favicon-16.png` / `favicon-32.png` | 16 / 32 | ICO fallback bundle also recommended |
+| `apple-touch-icon.png` | 180×180 | Opaque background (`#fafbfc` or `#0a0a0c`), no transparency |
+| `icon-192.png` / `icon-512.png` | 192 / 512 | PWA |
+| `icon-512-maskable.png` | 512 | Safe zone = center 66% (mark scaled to ~60% of canvas) |
+
+Generate from `lc.svg` (pure mark). Keep padding so the hexagon isn't clipped at round OS masks.
+
+### Usage in product UI
+
+These replace the old mesh-gradient blob logo. They are the brand; treat them as precise geometry, not decoration. The embedded-wordmark variants (`lc11/31/43/169`) are for static placements (page headers, social avatars, leave-behinds) — **the animated video/cover lockup uses `lc.svg` (pure mark) + a DM Sans `LongCipher` rendered by CSS, not an embedded-text variant.**

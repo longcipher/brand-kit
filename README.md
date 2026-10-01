@@ -21,12 +21,14 @@ A restrained, technical design system for the LongCipher account portal and bran
 
 | File | Description |
 |------|-------------|
-| **[DESIGN.md](DESIGN.md)** | Complete design system specification — colors, typography, spacing, components, interactions, voice |
-| **[lc.svg](lc.svg)** | Pure logo (no text/slogan) |
-| **[lc11.svg](lc11.svg)** | 1:1 logo with text |
-| **[lc31.svg](lc31.svg)** | 3:1 logo with text and slogan |
-| **[lc43.svg](lc43.svg)** | 4:3 logo with text and slogan |
-| **[lc169.svg](lc169.svg)** | 16:9 logo with text and slogan |
+| **[DESIGN.md](DESIGN.md)** | Complete design system — colors, typography, spacing, radius, components, a11y, brand assets |
+| **[lc.svg](lc.svg)** | Pure mark (no text) — primary asset |
+| **[lc11.svg](lc11.svg)** | 1:1 mark + DM Sans wordmark (path outlines) |
+| **[lc31.svg](lc31.svg)** | 3:1 lockup + slogan |
+| **[lc43.svg](lc43.svg)** | 4:3 lockup + slogan |
+| **[lc169.svg](lc169.svg)** | 16:9 lockup + slogan |
+| **[scripts/rebuild_logos.py](scripts/rebuild_logos.py)** | Rebuilds all logo variants from mark geometry + DM Sans (keeps skill copy in sync) |
+| **[favicons/](favicons/)** | Favicon / app icon set (SVG + 16/32 + Apple touch 180 + PWA 192/512 + maskable) |
 | **[skills/lc-tech-publisher](skills/lc-tech-publisher/)** | Agent Skill — turn an article into a LongCipher cover + podcast + explainer video |
 
 ## Agent Skill: LongCipher Tech Publisher
@@ -54,10 +56,14 @@ Primary:    #171718  (near-black ink, blue-tinted)
 Background: #fafbfc  (off-white canvas)
 Surface:    #ffffff  (pure white cards)
 Hairline:   #e0e2e8  (neutral-300, borders/dividers)
-Blue:       #0a72ef  (the single accent — actions, links, focus)
-Error:      #ff5b4f  (red, errors/destructive)
+Blue:       #0a72ef  (the single accent — fills, buttons, focus, large text)
+Blue text:  #0a63d0  (links and blue body text — AA on light, 5.47:1)
+Error:      #ff5b4f  (red, icons/borders/large only)
+Error text: #c62d2d  (error message copy — AA on light)
 Focus:      hsla(212,100%,48%,1)
 ```
+
+Contrast is a hard rule: body text ≥ 4.5:1, large/UI ≥ 3:1 on its background. `#0a72ef` fails AA for normal-size text on `#fafbfc` — use `#0a63d0`.
 
 ### Typography
 
@@ -65,6 +71,8 @@ Focus:      hsla(212,100%,48%,1)
 Display:   DM Sans, 700 weight, -0.02em tracking
 Body:      DM Sans, 400 weight, 0 tracking
 Code:      JetBrains Mono, 400 weight, tabular-nums
+CJK:       PingFang SC / Microsoft YaHei / Noto Sans SC fallback
+Wordmark:  DM Sans 700 path outlines in logo files (no font dependency)
 ```
 
 ### Spacing
@@ -77,8 +85,9 @@ Group: 8px → 16px → 32px (three-step rhythm)
 ### Radius — keep it sharp
 
 ```text
-All elements: 2px (the only radius in the system)
-No pills, no circular avatars, no 6/12/16px rounding.
+UI surfaces: 2px (cards, inputs, buttons, chips, tooltips)
+Exceptions:  illustration chips ≤16px; diagram primitives (nodes/dots) may be round
+No pills, no circular avatars, no 6/12/16px rounding on chrome.
 ```
 
 ### Dark Theme
