@@ -58,9 +58,7 @@ box-shadow:
 | Sans (UI, prose, headings) | **DM Sans** | `ui-sans-serif, system-ui, sans-serif` |
 | Mono (data, eyebrows, tickers, code) | **JetBrains Mono** | `ui-monospace, SFMono-Regular, monospace` |
 
-Fonts load via Google Fonts `<link>` (DM Sans weights 400/500/600/700/800,
-JetBrains Mono 400/500/700). Provide local fallbacks so a render without
-network degrades gracefully, not catastrophically.
+Fonts are **self-hosted** (`assets/fonts/*.woff2`, copied into each build tree by the build scripts) — no Google Fonts CDN, no network at render time. DM Sans weights 400/500/600/700/800, JetBrains Mono 400/500/700 (do not use mono weight 600 — that face is not shipped). Bundled faces are **Latin subsets**; CJK glyphs fall back to the system stack declared in the templates (`"PingFang SC", "Microsoft YaHei", "Noto Sans SC"`). Provide that fallback so a render without a CJK webfont degrades gracefully, not catastrophically.
 
 Type scale (base for 1920×1080; scale down via `--scale` for portrait):
 
@@ -132,9 +130,14 @@ appear *only* inside a data table cell, never as a decorative glow.
 ## 7. Brand Lockup
 
 - `lc.svg` mark placed small (top-left or bottom corner) as a quiet watermark at
-  ~0.5 opacity. The mark carries its fixed multicolor K-line palette and is
-  never recolored, never given a glow.
-- Wordmark "LongCipher" in DM Sans 700, `--ink-300`, low emphasis.
+  ~0.5 opacity. The mark carries its fixed multicolor K-line palette
+  (`#FF0000` / `#08C477` / `#2A2A2A` / `#FAFAF9`) and is never recolored,
+  never given a glow. The light `#FAFAF9` element is negative space — it reads
+  as a gap on the light canvas and as a bright separator on dark plates.
+- Wordmark "LongCipher" in **DM Sans 700**, tracking `-0.02em`, `--ink-300`,
+  low emphasis. Never JetBrains Mono, never a system font. (The standalone
+  lockup SVGs `lc11/31/43/169` already ship the wordmark as DM Sans path
+  outlines in `#0a72ef` — do not re-typeset them.)
 
 ## 8. Do / Don't
 
@@ -164,12 +167,16 @@ illustration chip** that makes each slide feel less like a slide and more like a
 knowledge card. The LLM never writes SVG — it picks a key from the fixed catalog
 (`_icons.js`, injected into `dashboard.html` / `shorts.html`):
 
-- **Catalog** (15 keys): `shield`, `rocket`, `chart`, `coins`, `cube`, `atom`,
-  `bolt`, `net`, `lock`, `spark`, `pick`, `scale`, `bot`, `bank`, `handshake`.
+- **Catalog** (19 keys): `shield`, `rocket`, `chart`, `coins`, `cube`, `atom`,
+  `bolt`, `net`, `lock`, `spark`, `pick`, `scale`, `bot`, `bank`, `handshake`,
+  `trend`, `gauge`, `layers`, `flow`.
   Each is brand-blue line art (`--accent` strokes, `--accent-text` details) on
   an `--accent-soft` chip with a 1px `--accent-hair` border and the rest
-  shadow stack. Radius ≤ 16px on the chip ONLY (illustrations are the one place
-  rounded forms are allowed); UI surfaces keep the 2px ceiling.
+  shadow stack. Radius ≤ 16px on the chip ONLY (illustrations are one of two
+  documented radius exceptions; diagram primitives — process-node rings,
+  connection dots — may also be round). UI surfaces keep the 2px ceiling.
+  Must match `ICONS` in `assets/templates/_icons.js` and `VALID_ICONS` in
+  `scripts/parse_article.py`.
 - **Placement**: keypoint / three_points / table / outro slides render the chip
   top-right (150×150px in the video, 44×44px in shorts). The keypoint stage
   gains `has-illust` padding (right: 24%) so the statement never collides.

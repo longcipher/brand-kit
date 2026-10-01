@@ -15,7 +15,7 @@
       @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
       @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
     </style>
-    <script src="assets/vendor/gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';document.head.appendChild(s);"></script>
+    <script src="assets/vendor/gsap.min.js"></script>
     <style>
       :root {
         --canvas: #fafbfc; --surface: #ffffff; --ink: #171718;
@@ -28,7 +28,7 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body {
         width: 1920px; height: 1080px; background: var(--canvas); overflow: hidden;
-        font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
         color: var(--ink); -webkit-font-smoothing: antialiased;
       }
       [data-composition-id] { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
@@ -60,7 +60,7 @@
         padding: 0 6%; pointer-events: none; opacity: 0; visibility: hidden; }
       #header .hd-lockup { display: flex; align-items: center; gap: 12px; }
       #header .hd-lockup img { width: 30px; height: 30px; }
-      #header .hd-lockup span { font-family:"DM Sans",sans-serif; font-size: 17px; font-weight: 700;
+      #header .hd-lockup span { font-family:"DM Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif; font-size: 17px; font-weight: 700;
         color: var(--ink-300); letter-spacing: -0.02em; }
       #header .hd-meta { display: flex; align-items: center; gap: 18px;
         font-family:"JetBrains Mono",monospace; font-size: 15px; letter-spacing: .1em;
@@ -931,7 +931,7 @@
       /* cover */
       .slide .lockup { position:absolute; top:5.5%; left:6%; display:flex; align-items:center; gap:12px; z-index:6; }
       .slide .lockup img { width:34px; height:34px; }
-      .slide .lockup span { font-family:"DM Sans",sans-serif; font-size:18px; font-weight:700; color:var(--ink-300); letter-spacing:-0.02em; }
+      .slide .lockup span { font-family:"DM Sans","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif; font-size:18px; font-weight:700; color:var(--ink-300); letter-spacing:-0.02em; }
       .slide .corner-tag { position:absolute; top:5.5%; right:6%; font-family:"JetBrains Mono",monospace; font-size:16px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); border:1px solid var(--accent-hair); padding:6px 10px; z-index:6; }
       /* Cover content is visible by DEFAULT so any static snapshot / preview
          frame (poster) captured at t=0 shows the full info-rich cover instead
@@ -1008,7 +1008,7 @@
       .slide .tbl thead th { font-family:"JetBrains Mono",monospace; font-size:18px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#ffffff; background:var(--accent); text-align:left; padding:18px 24px; }
       .slide .tbl tbody td { padding:18px 24px; color:var(--ink); border-bottom:1px solid var(--line); vertical-align:middle; line-height:1.35; }
       .slide .tbl tbody td:first-child { font-weight:600; color:var(--ink); }
-      .slide .tbl tbody td.num { font-family:"JetBrains Mono",monospace; font-weight:600; color:var(--accent-text); text-align:right; letter-spacing:.01em; }
+      .slide .tbl tbody td.num { font-family:"JetBrains Mono",monospace; font-weight:500; color:var(--accent-text); text-align:right; letter-spacing:.01em; }
       .slide .tbl tbody tr:nth-child(even) { background:rgba(23,23,23,0.018); }
       .slide .tbl tbody tr:last-child td { border-bottom:none; }
       /* chart — dither-style bar chart (bars grow + counters roll) */
@@ -1051,7 +1051,7 @@
         background:var(--accent-soft); border-left:3px solid var(--accent);
         padding:14px 20px; border-radius:2px; }
       .slide .analysis .an-tag { flex:0 0 auto; font-family:"JetBrains Mono",monospace; font-size:15px;
-        letter-spacing:.12em; text-transform:uppercase; color:#0a5fc4; padding-top:5px; }
+        letter-spacing:.12em; text-transform:uppercase; color:var(--accent-text); padding-top:5px; }
       .slide .analysis .an-txt { font-size:21px; font-weight:500; line-height:1.42; color:var(--ink); }
       /* callback tags — the "links to earlier chapters" connective tissue */
       .slide .callbacks { margin-top:16px; display:flex; flex-wrap:wrap; gap:10px; max-width:1240px; }
@@ -1140,7 +1140,7 @@
       .term-title { margin-left:10px; font-family:"JetBrains Mono",monospace; font-size:16px; color:rgba(255,255,255,0.6); }
       .term-body { padding:24px 28px; font-family:"JetBrains Mono",monospace; font-size:24px; line-height:1.7; }
       .term-line { color:rgba(255,255,255,0.85); white-space:pre-wrap; }
-      .term-line.term-cmd { color:#7cc0ff; }
+      .term-line.term-cmd { color:#7eb0ff; }
       .term-line.term-out { color:rgba(255,255,255,0.55); }
       .term-caret { display:inline-block; width:12px; height:26px; margin-left:4px; vertical-align:middle;
         background:var(--accent); }

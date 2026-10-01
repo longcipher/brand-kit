@@ -15,7 +15,7 @@
       @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
       @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 700; font-display: swap; src: url("assets/fonts/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
     </style>
-    <script src="assets/vendor/gsap.min.js" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js';document.head.appendChild(s);"></script>
+    <script src="assets/vendor/gsap.min.js"></script>
     <style>
       :root {
         --canvas: #fafbfc;
@@ -37,7 +37,7 @@
       html, body {
         width: {{WIDTH}}px; height: {{HEIGHT}}px; background: var(--canvas);
         overflow: hidden;
-        font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+        font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
         color: var(--ink);
         -webkit-font-smoothing: antialiased;
       }
@@ -51,9 +51,9 @@
       }
       .lockup img { width: 34px; height: 34px; }
       .lockup span {
-        font-family: "JetBrains Mono", monospace;
-        font-size: calc(18px * var(--scale)); font-weight: 700;
-        color: var(--ink-300); letter-spacing: .14em;
+        font-family: "DM Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+        font-size: calc(22px * var(--scale)); font-weight: 700;
+        color: var(--ink-300); letter-spacing: -0.02em;
       }
       .corner-tag {
         position: absolute; top: 5.5%; right: 6%;
